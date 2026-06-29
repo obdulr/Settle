@@ -11,6 +11,15 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  @Get('health')
+  getHealth(): object {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      service: 'settle-api'
+    };
+  }
+
   @Get('test-shared')
   testShared(): object {
     return {
