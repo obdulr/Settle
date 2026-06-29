@@ -75,13 +75,24 @@ packages/shared-sdk/
 
 ## 3. Authentication Implementation
 
+### Supported Authentication Methods
+
+**Standard Authentication Methods** (from Prime project):
+1. **Email/Password** - Traditional login with email and password
+2. **WebAuthn/Passkey** - FIDO2 passkey authentication
+3. **SMS/OTP** - Firebase-based phone verification
+4. **NO Social Login** - No Google, Facebook, or other social OAuth
+
 ### Backend Authentication (NestJS)
 
 **Required Files**:
 - `src/auth/jwt.strategy.ts` - JWT validation
 - `src/auth/local.strategy.ts` - Email/password validation
 - `src/auth/guards/` - Auth guards (JwtAuthGuard, RolesGuard, LocalAuthGuard)
-- `src/auth/webauthn.service.ts` - Passkey authentication (optional)
+- `src/auth/webauthn.service.ts` - Passkey authentication
+- `src/auth/webauthn.controller.ts` - Passkey endpoints
+- `src/entities/passkey.entity.ts` - Passkey data model
+- `src/entities/webauthn-challenge.entity.ts` - Challenge storage
 
 **Standard JWT Payload**:
 ```typescript
@@ -114,6 +125,77 @@ packages/shared-sdk/
 }
 ```
 
+### WebAuthn/Passkey Implementation
+
+**Required Endpoints**:
+```
+POST /auth/passkey/register/options    - Generate registration options
+POST /auth/passkey/register/verify    - Verify registration
+POST /auth/passkey/authenticate/options - Generate auth options
+POST /auth/passkey/authenticate/verify - Verify authentication
+GET  /auth/passkey/list/:userId        - List user passkeys
+DELETE /auth/passkey/:passkeyId        - Delete passkey
+```
+
+**Database Schema**:
+```typescript
+@Entity('user_passkeys')
+export class Passkey {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'uuid', name: 'user_id' })
+  userId: string;
+
+  @Column({ type: 'text', name: 'credential_id' })
+  credentialId: string;
+
+  @Column({ type: 'bytea', name: 'public_key' })
+  publicKey: Buffer;
+
+  @Column({ type: 'integer', default: 0, name: 'sign_count' })
+  signCount: number;
+
+  @Column({ type: 'text', array: true, default: () => 'ARRAY[]::TEXT[]' })
+  transports: string[];
+
+  @Column({ type: 'boolean', default: false, name: 'backed_up' })
+  backedUp: boolean;
+
+  @Column({ type: 'boolean', default: false, name: 'backup_eligible' })
+  backupEligible: boolean;
+
+  @Column({ type: 'text', nullable: true, name: 'device_type' })
+  deviceType: string;
+
+  @Column({ type: 'text', default: 'My Passkey' })
+  name: string;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true, name: 'last_used_at' })
+  lastUsedAt: Date;
+}
+```
+
+### SMS/OTP Implementation (Firebase)
+
+**Required Environment Variables**:
+```bash
+EXPO_PUBLIC_FIREBASE_API_KEY=
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=
+EXPO_PUBLIC_FIREBASE_APP_ID=
+```
+
+**Firebase Functions**:
+```typescript
+sendVerificationCode(phone, verifier) - Send OTP via Firebase
+verifyCode(code) - Verify OTP
+initRecaptchaVerifier(containerId) - Initialize reCAPTCHA (web)
+```
+
 ### Mobile Authentication
 
 **Auth Service Pattern**:
@@ -134,8 +216,94 @@ class AuthService {
   register(data: RegisterData): Promise<AuthResponse>;
   logout(): Promise<void>;
   
+  // Passkey operations
+  registerPasskey(options: any): Promise<any>;
+  authenticateWithPasskey(options: any): Promise<any>;
+  listPasskeys(userId: string): Promise<Passkey[]>;
+  deletePasskey(passkeyId: string): Promise<void>;
+  
+  // SMS/OTP operations
+  sendOtp(phone: string): Promise<void>;
+  verifyOtp(code: string): Promise<void>;
+  
   // Auth state
   isAuthenticated(): Promise<boolean>;
+}
+```
+
+### Database Schema
+
+**User Entity** (Standard across all projects):
+```typescript
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ unique: true, length: 255 })
+  email: string;
+
+  @Column({ name: 'password', type: 'varchar', length: 255, nullable: true })
+  password: string; // Bcrypt hashed
+
+  @Column({ type: 'varchar', length: 50, default: 'customer', nullable: true })
+  role?: string;
+
+  // Email verification
+  @Column({ name: 'email_verified', type: 'boolean', default: false, nullable: true })
+  emailVerified?: boolean;
+
+  @Column({ name: 'email_verification_token', nullable: true })
+  emailVerificationToken?: string;
+
+  @Column({ name: 'email_verification_expires', type: 'timestamp', nullable: true })
+  emailVerificationExpires?: Date;
+
+  // Phone verification
+  @Column({ name: 'phone_verified', type: 'boolean', default: false, nullable: true })
+  phoneVerified?: boolean;
+
+  @Column({ length: 20, nullable: true })
+  phone: string;
+
+  // Passkey fields
+  @Column({ name: 'passkey_id', nullable: true })
+  passkeyId?: string;
+
+  @Column({ name: 'passkey_public_key', nullable: true })
+  passkeyPublicKey?: string;
+
+  @Column({ name: 'passkey_verified_at', type: 'timestamp', nullable: true })
+  passkeyVerifiedAt?: Date;
+
+  // Security fields
+  @Column({ name: 'failed_login_attempts', type: 'int', default: 0, nullable: true })
+  failedLoginAttempts?: number;
+
+  @Column({ name: 'last_failed_login_at', type: 'timestamp', nullable: true })
+  lastFailedLoginAt?: Date;
+
+  @Column({ name: 'lockout_expires_at', type: 'timestamp', nullable: true })
+  lockoutExpiresAt?: Date;
+
+  @Column({ name: 'account_locked', type: 'boolean', default: false, nullable: true })
+  accountLocked?: boolean;
+
+  @Column({ name: 'last_password_change_at', type: 'timestamp', nullable: true })
+  lastPasswordChangeAt?: Date;
+
+  // Password reset
+  @Column({ name: 'reset_token', length: 255, nullable: true, select: false })
+  resetToken: string;
+
+  @Column({ name: 'reset_token_expires', type: 'timestamp', nullable: true })
+  resetTokenExpires: Date;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 }
 ```
 
@@ -416,9 +584,9 @@ module.exports = {
 ## Implementation Priority
 
 1. **High Priority**:
-   - Monorepo structure with pnpm
+   - Monorepo structure with npm/pnpm
    - Shared SDK architecture
-   - Authentication patterns
+   - Authentication patterns (Email/Password, WebAuthn, SMS/OTP)
    - Railway deployment configuration
 
 2. **Medium Priority**:
@@ -431,6 +599,44 @@ module.exports = {
    - Advanced CI/CD workflows
    - Specialized agent system
    - Advanced monitoring
+
+## Authentication Implementation Guide
+
+For detailed step-by-step authentication implementation, see [AUTH_IMPLEMENTATION_GUIDE.md](AUTH_IMPLEMENTATION_GUIDE.md).
+
+### Phase 1: Email/Password Authentication (Foundation)
+1. Implement JWT strategy with Passport
+2. Create Local strategy for email/password validation
+3. Set up user entity with password hashing (bcrypt)
+4. Implement auth guards (JwtAuthGuard, LocalAuthGuard)
+5. Create auth endpoints (register, login, refresh, logout)
+6. Add password reset functionality
+
+### Phase 2: WebAuthn/Passkey Authentication
+1. Install WebAuthn dependencies: `@simplewebauthn/server`, `@simplewebauthn/browser`
+2. Create Passkey entity for credential storage
+3. Create WebAuthnChallenge entity for challenge storage
+4. Implement WebAuthn service (register, authenticate)
+5. Create WebAuthn controller with endpoints
+6. Add frontend WebAuthn integration
+7. Implement passkey management (list, delete)
+
+### Phase 3: SMS/OTP Authentication
+1. Set up Firebase project
+2. Install Firebase SDK: `expo-firebase-auth`, `firebase`
+3. Configure Firebase environment variables
+4. Implement phone verification service
+5. Add OTP send/verify endpoints
+6. Integrate with registration flow
+7. Add phone verification status to user entity
+
+### Phase 4: Security Enhancements
+1. Implement account lockout after failed attempts
+2. Add email verification flow
+3. Implement password strength requirements
+4. Add rate limiting on auth endpoints
+5. Implement token refresh logic
+6. Add audit logging for auth events
 
 ## Migration Checklist
 
