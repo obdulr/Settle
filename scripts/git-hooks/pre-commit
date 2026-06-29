@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Prevent ._* files from being committed
+echo "Checking for macOS metadata files (._*)..."
+
+# Check if any ._ files are staged for commit
+if git diff --cached --name-only | grep -q '^\._'; then
+    echo "❌ ERROR: macOS metadata files (._*) are staged for commit."
+    echo "Please remove them with: npm run clean:mac-files"
+    echo "Or manually remove the specific files."
+    exit 1
+fi
+
+# Also check for any ._ files in the working directory that might be accidentally committed
+if git ls-files --others --exclude-standard | grep -q '^\._'; then
+    echo "⚠️  WARNING: Untracked macOS metadata files (._*) detected."
+    echo "Consider running: npm run clean:mac-files"
+fi
+
+echo "✅ No macOS metadata files found in commit."
+exit 0

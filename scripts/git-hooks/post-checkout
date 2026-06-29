@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Clean ._ files after checkout
+echo "Cleaning macOS metadata files after checkout..."
+npm run clean:mac-files 2>/dev/null || true

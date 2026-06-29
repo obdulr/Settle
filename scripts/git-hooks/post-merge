@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Clean ._ files after merge
+echo "Cleaning macOS metadata files after merge..."
+npm run clean:mac-files 2>/dev/null || true
