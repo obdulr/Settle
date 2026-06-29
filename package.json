@@ -2,6 +2,9 @@
   "name": "settle-monorepo",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "workspaces": [
     "packages/*",
     "settle-api",
@@ -9,19 +12,20 @@
     "settle-mobile"
   ],
   "scripts": {
+    "start": "npm run start:prod --workspace=settle-api",
     "dev": "npm run dev --workspace=settle-web",
     "dev:api": "npm run start:dev --workspace=settle-api",
     "dev:mobile": "npm run start --workspace=settle-mobile",
-    "build": "npm run build:shared && npm run build --workspaces",
+    "build": "npm run build:shared-sdk && npm run build --workspaces",
+    "build:shared-sdk": "npm run build --workspace=@settle/shared-sdk",
     "build:shared": "npm run build --workspace=@settle/shared",
     "build:web": "npm run build --workspace=settle-web",
     "build:api": "npm run build --workspace=settle-api",
     "build:mobile": "npm run build --workspace=settle-mobile",
-    "install:all": "npm install",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,.js,.jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,.js,.jsx,json,md}\"",
     "clean:mac-files": "find . -name '._*' -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/.next/*' -delete",
     "configure:macos": "./scripts/configure-macos.sh",
     "install:hooks": "./scripts/install-hooks.sh"

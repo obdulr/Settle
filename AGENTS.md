@@ -4,7 +4,25 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# macOS Metadata Files Prevention
+# Project Standardization
+
+This project follows the standardization patterns defined in `docs/STANDARDIZATION_GUIDE.md` based on the Prime project architecture.
+
+## Key Patterns
+
+1. **Shared SDK**: Use `@settle/shared-sdk` for authentication, API clients, and types
+2. **Authentication**: Follow the flows documented in `docs/FLOWS.md`
+3. **API Responses**: Profile responses are flat (not nested under `user` object)
+4. **Token Storage**: Web uses localStorage, mobile uses AsyncStorage
+5. **Health Endpoints**: `/health` and `/` for Railway health checks
+
+## Critical Files to Read Before Changes
+
+- `docs/FLOWS.md` - Authentication flows, API shapes, critical gotchas
+- `docs/STANDARDIZATION_GUIDE.md` - Standard patterns across projects
+- `packages/shared-sdk/` - Shared authentication and API utilities
+
+## macOS Metadata Files Prevention
 
 This project has multiple layers of protection against macOS metadata files (._*):
 

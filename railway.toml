@@ -22,3 +22,22 @@ grace_period = "10s"
 interval = "15s"
 restart_limit = 5
 timeout = "2s"
+
+# Environment Variables (set these in Railway dashboard)
+# Required:
+# - PORT (default: 4025)
+# - NODE_ENV (default: production)
+# - DATABASE_URL (PostgreSQL connection string)
+# - JWT_SECRET (JWT signing secret)
+# - JWT_REFRESH_SECRET (Refresh token secret)
+#
+# Optional:
+# - FRONTEND_URL (Frontend URL for CORS)
+#
+# Database Service Reference
+# Railway will automatically inject DATABASE_URL when you add a PostgreSQL service
+# To add a database:
+# 1. Go to Railway dashboard
+# 2. Click "New Service" > "Add Database" > "PostgreSQL"
+# 3. Railway will automatically set DATABASE_URL environment variable
+# 4. The database will be accessible via the DATABASE_URL variable
