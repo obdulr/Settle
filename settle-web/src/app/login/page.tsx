@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createJsonApiClient, normalizeApiBaseUrl } from '@settle/shared-sdk/auth';
 import { storeAuth, isAuthenticated, clearAuth } from '../../lib/authUtils';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import ErrorMessage from '../../components/ErrorMessage';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,8 +16,8 @@ export default function LoginPage() {
 
   // Redirect if already authenticated
   if (typeof window !== 'undefined' && isAuthenticated()) {
-    router.push('/profile');
-    return null;
+    router.push('/dashboard');
+    return <LoadingSpinner />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,7 +27,7 @@ export default function LoginPage() {
 
     try {
       const apiCall = createJsonApiClient({
-        getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'https://api.settleinpeace.com',
+        getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
         getToken: () => null,
         onUnauthorized: () => {
           clearAuth();
@@ -40,7 +42,7 @@ export default function LoginPage() {
 
       if (response.success) {
         storeAuth(response.accessToken, response.user);
-        router.push('/profile');
+        router.push('/dashboard');
       } else {
         setError(response.error || 'Login failed');
       }
@@ -51,16 +53,16 @@ export default function LoginPage() {
     }
   };
 
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 dark:bg-black">
       <div className="w-full max-w-md p-8 bg-white dark:bg-zinc-900 rounded-lg shadow-md">
         <h1 className="text-2xl font-bold mb-6 text-center text-black dark:text-white">Login</h1>
         
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded text-red-800 dark:text-red-200">
-            {error}
-          </div>
-        )}
+        {error && <ErrorMessage message={error} />}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

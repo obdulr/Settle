@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createJsonApiClient } from '@settle/shared-sdk/auth';
 import { getStoredToken, getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import ErrorMessage from '../../components/ErrorMessage';
 
 interface UserProfile {
   id: string;
@@ -45,7 +47,7 @@ export default function ProfilePage() {
 
       try {
         const apiCall = createJsonApiClient({
-          getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'https://api.settleinpeace.com',
+          getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
           getToken: () => token,
           onUnauthorized: () => {
             clearAuth();
@@ -85,7 +87,7 @@ export default function ProfilePage() {
 
     try {
       const apiCall = createJsonApiClient({
-        getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'https://api.settleinpeace.com',
+        getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
         getToken: () => token,
         onUnauthorized: () => {
           clearAuth();
@@ -108,19 +110,11 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-zinc-50 dark:bg-black">
-        <div className="text-zinc-600 dark:text-zinc-400">Loading...</div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-zinc-50 dark:bg-black">
-        <div className="text-red-600 dark:text-red-400">{error}</div>
-      </div>
-    );
+    return <ErrorMessage message={error} />;
   }
 
   return (
