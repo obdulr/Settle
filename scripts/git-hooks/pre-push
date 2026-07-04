@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Prevent ._* files from being pushed
+echo "Checking for macOS metadata files (._*) before push..."
+
+# Check if any ._ files are in the repository
+if git ls-files | grep -q '^\._'; then
+    echo "❌ ERROR: macOS metadata files (._*) are tracked in the repository."
+    echo "Please remove them with: npm run clean:mac-files"
+    echo "Then commit the removal."
+    exit 1
+fi
+
+echo "✅ No macOS metadata files found in repository."
+exit 0

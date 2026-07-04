@@ -17,5 +17,9 @@ if git ls-files --others --exclude-standard | grep -q '^\._'; then
     echo "Consider running: npm run clean:mac-files"
 fi
 
+# Auto-clean any ._ files in the working directory before commit
+echo "Auto-cleaning any ._ files in working directory..."
+find . -name '._*' -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/.next/*' -delete 2>/dev/null || true
+
 echo "✅ No macOS metadata files found in commit."
 exit 0

@@ -50,12 +50,37 @@ This architecture separates concerns: Railway handles all backend infrastructure
 
 ## macOS Metadata Files Prevention
 
-This project has multiple layers of protection against macOS metadata files (._*):
+This project has comprehensive, permanent protection against macOS metadata files (._*):
 
-1. **Git hooks**: Pre-commit hook blocks ._ files from being committed
-2. **Auto-cleanup**: Post-merge and post-checkout hooks automatically clean ._ files
-3. **Git ignores**: All .gitignore files exclude ._ patterns
+### Prevention Layers
+
+1. **Git hooks**: Multiple hooks prevent ._ files from being committed or pushed
+2. **Auto-cleanup**: Hooks automatically clean ._ files on commit, checkout, and merge
+3. **Git ignores**: All .gitignore files exclude ._ patterns and other macOS metadata
 4. **Cleanup command**: Run `pnpm run clean:mac-files` to manually clean
-5. **macOS config**: Run `./scripts/configure-macos.sh` to reduce ._ file creation
+5. **macOS config**: Run `./scripts/configure-macos.sh` to reduce ._ file creation at system level
 
-If you encounter ._ files, run the cleanup command. The git hooks will prevent them from being committed.
+### Git Hooks
+
+- **pre-commit**: Blocks ._ files from being committed and auto-cleans them
+- **post-commit**: Auto-cleans ._ files after commit
+- **post-checkout**: Auto-cleans ._ files after checkout
+- **post-merge**: Auto-cleans ._ files after merge
+- **pre-push**: Blocks ._ files from being pushed
+
+### System Configuration
+
+Run `./scripts/configure-macos.sh` to configure macOS to prevent ._ file creation:
+- Disables ._ files on network volumes
+- Disables ._ files on USB drives
+- Disables ._ files on external drives
+- Disables Spotlight indexing for external drives
+
+### Manual Cleanup
+
+If you encounter ._ files, run:
+```bash
+pnpm run clean:mac-files
+```
+
+The git hooks will automatically prevent them from being committed and clean them on every git operation.

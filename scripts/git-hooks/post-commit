@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Clean ._ files after commit
+echo "Cleaning macOS metadata files after commit..."
+find . -name '._*' -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/.next/*' -delete 2>/dev/null || true
