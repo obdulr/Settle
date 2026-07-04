@@ -7,7 +7,7 @@ export default function Home() {
             Settle Web Application
           </h1>
           <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Authentication system with Railway backend and Render frontend.
+            Complete authentication system with Railway backend and Render frontend.
           </p>
           <div className="flex flex-col gap-4">
             <div className="p-4 bg-blue-50 dark:bg-blue-900 rounded">
@@ -16,11 +16,27 @@ export default function Home() {
               <p className="text-sm">Frontend: Render (Next.js)</p>
             </div>
             <div className="p-4 bg-green-50 dark:bg-green-900 rounded">
-              <h2 className="font-semibold mb-2">Authentication Endpoints</h2>
+              <h2 className="font-semibold mb-2">Authentication Features</h2>
+              <ul className="text-sm space-y-1">
+                <li>✅ User registration with email verification</li>
+                <li>✅ JWT token authentication (30d access, 7d refresh)</li>
+                <li>✅ Password reset functionality</li>
+                <li>✅ Profile management</li>
+                <li>✅ Rate limiting and security</li>
+                <li>✅ Mobile authentication support</li>
+              </ul>
+            </div>
+            <div className="p-4 bg-purple-50 dark:bg-purple-900 rounded">
+              <h2 className="font-semibold mb-2">API Endpoints</h2>
               <ul className="text-sm space-y-1">
                 <li>POST /auth/register - Register new user</li>
                 <li>POST /auth/login - Login user</li>
                 <li>GET /auth/profile - Get user profile (protected)</li>
+                <li>PUT /auth/profile - Update profile (protected)</li>
+                <li>POST /auth/forgot-password - Request password reset</li>
+                <li>POST /auth/reset-password - Reset password</li>
+                <li>POST /auth/verify-email - Verify email</li>
+                <li>POST /auth/resend-verification - Resend verification</li>
               </ul>
             </div>
             <div className="flex gap-4">
