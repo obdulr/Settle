@@ -6,32 +6,36 @@ import { AppService } from './app.service';
 import { User } from './entities/user.entity';
 import { Activity } from './entities/activity.entity';
 import { Debt } from './entities/debt.entity';
+import { Provider } from './entities/provider.entity';
+import { Lead } from './entities/lead.entity';
 import { AuthModule } from './auth/auth.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { DebtsModule } from './debts/debts.module';
+import { ProvidersModule } from './providers/providers.module';
+import { LeadsModule } from './leads/leads.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL?.includes('railway') 
+      ssl: process.env.DATABASE_URL?.includes('railway')
         ? { rejectUnauthorized: false }
         : false,
-      entities: [User, Activity, Debt],
+      entities: [User, Activity, Debt, Provider, Lead],
       synchronize: false,
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
       migrations: ['src/migrations/*.ts'],
       migrationsTableName: 'migrations',
     }),
-    TypeOrmModule.forFeature([User, Activity, Debt]),
+    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead]),
     AuthModule,
     ActivitiesModule,
     DebtsModule,
+    ProvidersModule,
+    LeadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
