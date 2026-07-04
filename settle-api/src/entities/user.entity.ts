@@ -3,13 +3,13 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ unique: true, length: 255 })
-  email: string;
+  email!: string;
 
   @Column({ name: 'password', type: 'varchar', length: 255, nullable: true })
-  password: string; // Bcrypt hashed
+  password!: string; // Bcrypt hashed
 
   @Column({ type: 'varchar', length: 50, default: 'customer', nullable: true })
   role?: string;
@@ -68,8 +68,8 @@ export class User {
   resetTokenExpires?: Date;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt!: Date;
 }
