@@ -12,7 +12,7 @@
     "dev": "pnpm --filter settle-web dev",
     "dev:api": "pnpm --filter settle-api start:dev",
     "dev:mobile": "pnpm --filter settle-mobile start",
-    "build": "pnpm --filter @settle/shared-sdk build && turbo run build",
+    "build": "pnpm --filter settle-web build",
     "build:shared-sdk": "pnpm --filter @settle/shared-sdk build",
     "build:shared": "pnpm --filter @settle/shared build",
     "build:web": "pnpm --filter settle-web build",
