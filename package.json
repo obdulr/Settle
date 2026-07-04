@@ -8,7 +8,7 @@
     "pnpm": ">=9.0.0"
   },
   "scripts": {
-    "start": "pnpm --filter settle-api start:prod",
+    "start": "pnpm --filter settle-web start",
     "dev": "pnpm --filter settle-web dev",
     "dev:api": "pnpm --filter settle-api start:dev",
     "dev:mobile": "pnpm --filter settle-mobile start",
