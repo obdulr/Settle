@@ -10,28 +10,36 @@ A monorepo containing Settle's web, mobile, and API applications with shared pac
 - `packages/shared-sdk/` - Comprehensive SDK (auth, API, types, utils)
 - `packages/shared/` - Legacy shared package (being phased out)
 
+## Package Manager
+
+This project uses **pnpm** as the package manager (NOT npm or yarn).
+
+**Requirements:**
+- Node.js >= 22.0.0
+- pnpm >= 9.0.0
+
 ## Getting Started
 
 Install dependencies:
 ```bash
-npm install
+pnpm install
 ```
 
 Run development servers:
 ```bash
 # Web
-npm run dev
+pnpm run dev
 
 # API
-npm run dev:api
+pnpm run dev:api
 
 # Mobile
-npm run dev:mobile
+pnpm run dev:mobile
 ```
 
 Build all projects:
 ```bash
-npm run build
+pnpm run build
 ```
 
 ## Shared SDK
@@ -91,12 +99,12 @@ const profile = await api.auth.profile();
 
 Clean macOS metadata files (._*):
 ```bash
-npm run clean:mac-files
+pnpm run clean:mac-files
 ```
 
 Install git hooks (if needed):
 ```bash
-npm run install:hooks
+pnpm run install:hooks
 ```
 
 ### Preventing ._ Files

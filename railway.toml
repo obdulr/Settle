@@ -1,9 +1,9 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "cd settle-api && npm install && npm run build"
+buildCommand = "cd settle-api && pnpm install && pnpm run build"
 
 [deploy]
-startCommand = "cd settle-api && node dist/main"
+startCommand = "cd settle-api && pnpm start"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

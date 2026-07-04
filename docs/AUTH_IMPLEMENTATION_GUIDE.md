@@ -16,8 +16,8 @@ All projects will support exactly these authentication methods:
 
 #### 1. Install Dependencies
 ```bash
-npm install @nestjs/jwt @nestjs/passport passport passport-jwt passport-local bcrypt class-validator class-transformer
-npm install --save-dev @types/passport-jwt @types/passport-local @types/bcrypt
+pnpm add @nestjs/jwt @nestjs/passport passport passport-jwt passport-local bcrypt class-validator class-transformer
+pnpm add -D @types/passport-jwt @types/passport-local @types/bcrypt
 ```
 
 #### 2. Create User Entity
@@ -435,7 +435,7 @@ export const authService = new AuthService();
 
 #### 1. Install Dependencies
 ```bash
-npm install @simplewebauthn/server @simplewebauthn/types
+pnpm install @simplewebauthn/server @simplewebauthn/types
 ```
 
 #### 2. Create Passkey Entity
@@ -590,8 +590,8 @@ export class WebAuthnService {
 
 #### 1. Install Dependencies
 ```bash
-npm install firebase
-npm install expo-firebase-auth
+pnpm install firebase
+pnpm install expo-firebase-auth
 ```
 
 #### 2. Configure Firebase

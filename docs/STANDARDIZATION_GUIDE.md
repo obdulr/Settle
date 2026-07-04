@@ -26,7 +26,7 @@ project-name/
 
 ### Package Manager
 - **Standard**: `pnpm` (strictly enforced)
-- **Version**: `>=9.0.0`
+- **Version**: `>=9.0.0` (prefer 9.15.5)
 - **Node Version**: `>=22.0.0` (prefer v24)
 
 ### Workspace Configuration
@@ -37,6 +37,17 @@ packages:
   - 'project-api'
   - 'project-mobile/packages/*'
   - 'packages/*'
+```
+
+**Root package.json**:
+```json
+{
+  "packageManager": "pnpm@9.15.5",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}
 ```
 
 ## 2. Shared Packages Architecture
@@ -331,14 +342,12 @@ function createJsonApiClient(config: {
 
 **nixpacks.toml**:
 ```toml
-[phases.build]
-cmds = ["cd project-api && pnpm install && pnpm run build"]
+[build]
+builder = "NIXPACKS"
+buildCommand = "cd project-api && pnpm install && pnpm run build"
 
-[phases.setup]
-nixPkgs = ['nodejs-24_x', 'pnpm-9_x']
-
-[start]
-cmd = "cd project-api && pnpm start"
+[deploy]
+startCommand = "cd project-api && pnpm start"
 ```
 
 **Health Endpoints**:
@@ -584,7 +593,7 @@ module.exports = {
 ## Implementation Priority
 
 1. **High Priority**:
-   - Monorepo structure with npm/pnpm
+   - Monorepo structure with pnpm
    - Shared SDK architecture
    - Authentication patterns (Email/Password, WebAuthn, SMS/OTP)
    - Railway deployment configuration

@@ -2,26 +2,22 @@
   "name": "settle-monorepo",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@9.15.5",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
   },
-  "workspaces": [
-    "packages/*",
-    "settle-api",
-    "settle-web",
-    "settle-mobile"
-  ],
   "scripts": {
-    "start": "npm run start:prod --workspace=settle-api",
-    "dev": "npm run dev --workspace=settle-web",
-    "dev:api": "npm run start:dev --workspace=settle-api",
-    "dev:mobile": "npm run start --workspace=settle-mobile",
-    "build": "npm run build:shared-sdk && npm run build --workspaces",
-    "build:shared-sdk": "npm run build --workspace=@settle/shared-sdk",
-    "build:shared": "npm run build --workspace=@settle/shared",
-    "build:web": "npm run build --workspace=settle-web",
-    "build:api": "npm run build --workspace=settle-api",
-    "build:mobile": "npm run build --workspace=settle-mobile",
+    "start": "pnpm --filter settle-api start:prod",
+    "dev": "pnpm --filter settle-web dev",
+    "dev:api": "pnpm --filter settle-api start:dev",
+    "dev:mobile": "pnpm --filter settle-mobile start",
+    "build": "pnpm --filter @settle/shared-sdk build && turbo run build",
+    "build:shared-sdk": "pnpm --filter @settle/shared-sdk build",
+    "build:shared": "pnpm --filter @settle/shared build",
+    "build:web": "pnpm --filter settle-web build",
+    "build:api": "pnpm --filter settle-api build",
+    "build:mobile": "pnpm --filter settle-mobile build",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,.js,.jsx,json,md}\"",
@@ -37,6 +33,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "prettier": "^3.9.1",
+    "turbo": "^2.0.0",
     "typescript": "^5.0.0"
   }
 }
