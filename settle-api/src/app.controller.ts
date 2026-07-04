@@ -1,14 +1,9 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
 
 @Controller()
 export class AppController {
-  constructor(
-    private readonly appService: AppService,
-    @InjectDataSource() private dataSource: DataSource,
-  ) {}
+  constructor(private readonly appService: AppService) {}
 
   @Get()
   getHello(): string {
@@ -16,22 +11,12 @@ export class AppController {
   }
 
   @Get('health')
-  async getHealth(): Promise<object> {
-    const dbStatus = await this.checkDatabase();
+  getHealth(): object {
     return {
-      status: dbStatus ? 'ok' : 'degraded',
+      status: 'ok',
       timestamp: new Date().toISOString(),
       service: 'settle-api',
-      database: dbStatus ? 'connected' : 'disconnected',
+      database: 'not configured',
     };
-  }
-
-  private async checkDatabase(): Promise<boolean> {
-    try {
-      await this.dataSource.query('SELECT 1');
-      return true;
-    } catch (error) {
-      return false;
-    }
   }
 }
