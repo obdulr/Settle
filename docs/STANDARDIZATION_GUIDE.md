@@ -380,7 +380,7 @@ Start Command: pnpm start
 - `/` - Root health check
 
 **Environment Variables**:
-- `PORT` - Service port
+- `PORT` - Service port (4025 for backend, 3025 for frontend)
 - `NODE_ENV` - Environment
 - `DATABASE_URL` - Database connection
 - `JWT_SECRET` - JWT signing secret

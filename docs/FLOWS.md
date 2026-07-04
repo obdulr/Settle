@@ -216,7 +216,7 @@ app/
 import { createSettleApi } from '@settle/shared-sdk';
 
 const api = createSettleApi({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
   getToken: () => localStorage.getItem('accessToken'),
   onUnauthorized: () => {
     // Handle unauthorized (logout, redirect to login)
@@ -235,7 +235,7 @@ const profile = await api.auth.profile();
 - `JWT_REFRESH_SECRET` - Refresh token secret
 - `DATABASE_URL` - PostgreSQL connection string
 - `NEXT_PUBLIC_API_URL` - API URL (frontend)
-- `PORT` - Service port (backend)
+- `PORT` - Service port (4025 for backend, 3025 for frontend)
 
 ### Optional Variables
 - `FRONTEND_URL` - Frontend URL for CORS

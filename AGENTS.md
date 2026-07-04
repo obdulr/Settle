@@ -32,6 +32,22 @@ This project uses **pnpm** as the package manager (NOT npm or yarn).
 
 This architecture separates concerns: Railway handles all backend infrastructure including PostgreSQL databases and API services, while Render handles frontend web applications with excellent Next.js support and global edge network.
 
+## Port Assignments
+
+**Development Port Assignments:**
+- **Frontend (settle-web)**: Port 3025
+- **Backend (settle-api)**: Port 4025
+
+**Production URLs:**
+- **Frontend**: https://settle-e700.onrender.com
+- **Backend**: Railway service URL (configured in Railway dashboard)
+
+**Environment Variables:**
+- `NEXT_PUBLIC_API_URL`: Backend API URL for frontend
+- `DATABASE_URL`: PostgreSQL connection string for backend
+- `JWT_SECRET`: JWT secret for token generation
+- `JWT_REFRESH_SECRET`: JWT refresh token secret
+
 ## Key Patterns
 
 1. **Shared SDK**: Use `@settle/shared-sdk` for authentication, API clients, and types

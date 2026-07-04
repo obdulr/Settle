@@ -2,6 +2,18 @@
 
 This guide provides step-by-step instructions for implementing the standard authentication system across all projects (Settle, Reid, Notyced, Prime).
 
+## Port Assignments
+
+**Development Port Assignments:**
+- **Frontend (project-web)**: Port 3025
+- **Backend (project-api)**: Port 4025
+
+**Environment Variables:**
+- `NEXT_PUBLIC_API_URL`: Frontend API URL (default: `http://localhost:4025`)
+- `EXPO_PUBLIC_API_URL`: Mobile API URL (default: `http://localhost:4025`)
+- `WEBAUTHN_ORIGIN`: WebAuthn origin (default: `http://localhost:3025`)
+- `PORT`: Backend service port (default: 4025)
+
 ## Authentication Methods
 
 All projects will support exactly these authentication methods:
@@ -307,7 +319,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const api = createSettleApi({
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+    baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
     getToken: () => localStorage.getItem('accessToken'),
     onUnauthorized: () => {
       logout();
@@ -372,7 +384,7 @@ class AuthService {
 
   constructor() {
     this.api = createSettleApi({
-      baseUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
+      baseUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4025',
       getToken: () => this.getToken(),
       onUnauthorized: () => this.logout(),
     });
@@ -665,7 +677,7 @@ JWT_REFRESH_SECRET=your-refresh-secret-here
 
 # WebAuthn
 WEBAUTHN_RP_ID=localhost
-WEBAUTHN_ORIGIN=http://localhost:3000
+WEBAUTHN_ORIGIN=http://localhost:3025
 
 # Firebase
 EXPO_PUBLIC_FIREBASE_API_KEY=
@@ -674,8 +686,8 @@ EXPO_PUBLIC_FIREBASE_PROJECT_ID=
 EXPO_PUBLIC_FIREBASE_APP_ID=
 
 # API URLs
-NEXT_PUBLIC_API_URL=http://localhost:3000
-EXPO_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://localhost:4025
+EXPO_PUBLIC_API_URL=http://localhost:4025
 ```
 
 ## Testing Checklist

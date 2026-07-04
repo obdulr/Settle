@@ -6,6 +6,21 @@
 
 This architecture separates concerns: Railway handles all backend infrastructure including PostgreSQL databases and API services, while Render handles frontend web applications with excellent Next.js support and global edge network.
 
+## Port Assignments
+
+**Development Port Assignments:**
+- **Frontend (project-web)**: Port 3025
+- **Backend (project-api)**: Port 4025
+
+**Environment Variables:**
+- `PORT`: Backend service port (default: 4025)
+- `NEXT_PUBLIC_API_URL`: Frontend API URL (default: `http://localhost:4025`)
+- `EXPO_PUBLIC_API_URL`: Mobile API URL (default: `http://localhost:4025`)
+
+**Production URLs:**
+- **Frontend**: Render service URL
+- **Backend**: Railway service URL
+
 ## Current State Analysis
 
 ### Database Status

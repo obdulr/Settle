@@ -57,7 +57,7 @@ The `@settle/shared-sdk` package contains comprehensive utilities used across al
 import { createSettleApi } from '@settle/shared-sdk';
 
 const api = createSettleApi({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
   getToken: () => localStorage.getItem('accessToken'),
   onUnauthorized: () => {
     // Handle unauthorized (logout, redirect to login)
@@ -83,13 +83,15 @@ const profile = await api.auth.profile();
 - Configuration: `railway.toml`
 - Health endpoints: `/health`, `/`
 - Port: 4025
-- Build: `cd settle-api && npm install && npm run build`
+- Build: `cd settle-api && pnpm install && pnpm run build`
 - Start: `cd settle-api && node dist/main`
 
-### Vercel (Web)
-- Standard Next.js deployment
-- Environment variables in Vercel dashboard
+### Render (Web)
+- Configuration: `render.yaml`
+- Port: 3025
+- Environment variables in Render dashboard
 - Automatic deployments on main branch
+- Live URL: https://settle-e700.onrender.com
 
 ### EAS (Mobile)
 - Configuration: `eas.json`
