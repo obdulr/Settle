@@ -15,6 +15,7 @@ export default function Navigation() {
     { href: '/register', label: 'Register', show: !authenticated },
     { href: '/profile', label: 'Profile', show: authenticated },
     { href: '/dashboard', label: 'Dashboard', show: authenticated },
+    { href: '/debts', label: 'Debts', show: authenticated },
     { href: '/settings', label: 'Settings', show: authenticated },
   ];
 

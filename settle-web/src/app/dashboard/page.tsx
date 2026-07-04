@@ -136,8 +136,14 @@ export default function DashboardPage() {
             <h2 className="text-lg font-semibold mb-4 text-black dark:text-white">Quick Actions</h2>
             <div className="space-y-3">
               <a
-                href="/profile"
+                href="/debts"
                 className="block w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-center"
+              >
+                Manage Debts
+              </a>
+              <a
+                href="/profile"
+                className="block w-full py-2 px-4 bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-600 text-center"
               >
                 Edit Profile
               </a>
@@ -156,21 +162,25 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Status Card */}
+          {/* Financial Peace Card */}
           <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-semibold mb-4 text-black dark:text-white">Account Status</h2>
+            <h2 className="text-lg font-semibold mb-4 text-black dark:text-white">Your Journey to Peace</h2>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">Status</span>
-                <span className="text-green-600 dark:text-green-400 font-medium">Active</span>
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">Debt Tracking</span>
+                <span className="text-yellow-600 dark:text-yellow-400 font-medium">Start Now</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">Email Verified</span>
-                <span className="text-yellow-600 dark:text-yellow-400 font-medium">Pending</span>
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">Financial Education</span>
+                <span className="text-gray-400 dark:text-gray-500 font-medium">Coming Soon</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">Phone Verified</span>
-                <span className="text-gray-400 dark:text-gray-500 font-medium">Not Set</span>
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">Debt Settlement</span>
+                <span className="text-gray-400 dark:text-gray-500 font-medium">Coming Soon</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">Financial Coaching</span>
+                <span className="text-gray-400 dark:text-gray-500 font-medium">Coming Soon</span>
               </div>
             </div>
           </div>

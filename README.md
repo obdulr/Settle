@@ -1,14 +1,78 @@
-# Settle Monorepo
+# Settle In Peace Monorepo
 
-A monorepo containing Settle's web, mobile, and API applications with shared packages, following standardization patterns from the Prime project.
+A comprehensive debt relief and financial coaching platform that helps people settle their debts and find financial peace through multiple pathways.
 
-## Structure
+## Business Model
 
-- `settle-api/` - NestJS backend API
-- `settle-web/` - Next.js frontend web application
+**Settle In Peace** operates on a three-pillar business model:
+
+### Pillar 1: Debt Settlement (Phase 4 - Later)
+- Direct debt settlement services
+- Negotiate lump-sum payoffs for clients
+- Revenue: 15-25% of enrolled debt
+- Requires state licensing and compliance
+
+### Pillar 2: Lead Generation (Phase 1 - Now)
+- Referral-based lead generation for licensed debt relief companies
+- Content marketing and SEO-driven traffic
+- Revenue: $50-$200 per qualified lead
+- No licensing required (referral model)
+
+### Pillar 3: Financial Coaching (Phase 1 - Now)
+- Subscription-based financial coaching and education
+- DIY debt management guidance
+- Revenue: $49-$97/month per subscriber
+- Budgeting, credit education, negotiation training
+
+## Target Audience
+
+- Individuals struggling with debt (credit cards, personal loans, medical bills)
+- People seeking financial education and coaching
+- Consumers looking for debt relief options
+- Ages 25-55, income $30k-$100k, US-based
+
+## Value Proposition
+
+"Settle in peace" - Double meaning:
+- **Emotional**: Finally at peace, no more debt stress or anxiety
+- **Financial**: Professional debt settlement services to resolve accounts
+
+## Monorepo Structure
+
+- `settle-api/` - NestJS backend API (Railway + PostgreSQL)
+- `settle-web/` - Next.js frontend web application (Render)
 - `settle-mobile/` - Expo React Native mobile application
 - `packages/shared-sdk/` - Comprehensive SDK (auth, API, types, utils)
 - `packages/shared/` - Legacy shared package (being phased out)
+
+## Business Features
+
+### Phase 1: Core Platform (Current)
+- User authentication and profile management
+- Financial assessment and debt tracking
+- Resource library and educational content
+- Lead generation for debt relief partners
+- Financial coaching subscription management
+
+### Phase 2: Enhanced Features
+- Interactive debt payoff calculators
+- Credit score monitoring integration
+- Budget management tools
+- Goal tracking and progress visualization
+- Community features and forums
+
+### Phase 3: Advanced Services
+- AI-powered debt analysis
+- Automated negotiation suggestions
+- Credit repair tools
+- Investment guidance
+- Retirement planning
+
+### Phase 4: Full Debt Settlement
+- Licensed debt settlement services
+- Direct creditor negotiations
+- Legal compliance integration
+- Trust account management
 
 ## Package Manager
 
