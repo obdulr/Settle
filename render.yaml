@@ -7,6 +7,6 @@ services:
     startCommand: pnpm start
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        sync: false
+        value: https://api.settleinpeace.com
       - key: NODE_ENV
         value: production
