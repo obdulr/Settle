@@ -7,8 +7,8 @@ Based on Prime project analysis, this guide defines the standard patterns that s
 ### Standard Structure
 ```
 project-name/
-├── project-api/              # NestJS backend API
-├── project-web/              # Next.js frontend
+├── project-api/              # NestJS backend API (Railway)
+├── project-web/              # Next.js frontend (Render)
 ├── project-mobile/           # React Native workspace
 │   ├── apps/
 │   │   ├── main-app/         # Primary mobile app
@@ -21,7 +21,8 @@ project-name/
 ├── package.json              # Root workspace config
 ├── pnpm-workspace.yaml       # Workspace definitions
 ├── turbo.json                # Build orchestration
-└── nixpacks.toml             # Railway deployment config
+├── railway.toml              # Railway deployment config (backend)
+└── render.yaml               # Render deployment config (frontend)
 ```
 
 ### Package Manager
@@ -340,7 +341,7 @@ function createJsonApiClient(config: {
 
 ### Railway Deployment (Backend)
 
-**nixpacks.toml**:
+**railway.toml**:
 ```toml
 [build]
 builder = "NIXPACKS"
@@ -348,6 +349,29 @@ buildCommand = "cd project-api && pnpm install && pnpm run build"
 
 [deploy]
 startCommand = "cd project-api && pnpm start"
+healthcheckPath = "/health"
+```
+
+### Render Deployment (Frontend)
+
+**render.yaml**:
+```yaml
+services:
+  - type: web
+    name: project-web
+    env: node
+    buildCommand: pnpm install && pnpm run build
+    startCommand: pnpm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://api.project.railway.app
+```
+
+**Manual Render Configuration**:
+```
+Root Directory: project-web
+Build Command: pnpm install && pnpm run build
+Start Command: pnpm start
 ```
 
 **Health Endpoints**:

@@ -25,6 +25,13 @@ This project uses **pnpm** as the package manager (NOT npm or yarn).
 
 **Never use npm or yarn commands.**
 
+## Deployment Architecture
+
+**Backend**: Railway (PostgreSQL databases + API services)
+**Frontend**: Render (Next.js web applications)
+
+This architecture separates concerns: Railway handles all backend infrastructure including PostgreSQL databases and API services, while Render handles frontend web applications with excellent Next.js support and global edge network.
+
 ## Key Patterns
 
 1. **Shared SDK**: Use `@settle/shared-sdk` for authentication, API clients, and types
@@ -32,6 +39,7 @@ This project uses **pnpm** as the package manager (NOT npm or yarn).
 3. **API Responses**: Profile responses are flat (not nested under `user` object)
 4. **Token Storage**: Web uses localStorage, mobile uses AsyncStorage
 5. **Health Endpoints**: `/health` and `/` for Railway health checks
+6. **File Storage**: Use Railway-compatible storage solutions (local volumes, S3-compatible services)
 
 ## Critical Files to Read Before Changes
 

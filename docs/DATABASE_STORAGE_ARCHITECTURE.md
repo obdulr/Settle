@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-**Standard Architecture**: Railway PostgreSQL (databases) + Supabase Storage (files)
+**Standard Architecture**: Railway PostgreSQL (databases + backend) + Render (frontend web applications)
 
-This architecture separates concerns: Railway handles structured data with excellent PostgreSQL management, while Supabase Storage handles file uploads with built-in CDN and S3-compatible API.
+This architecture separates concerns: Railway handles all backend infrastructure including PostgreSQL databases and API services, while Render handles frontend web applications with excellent Next.js support and global edge network.
 
 ## Current State Analysis
 
@@ -20,9 +20,9 @@ This architecture separates concerns: Railway handles structured data with excel
 | Project | Current Storage | Status |
 |---------|----------------|--------|
 | Settle | None | ✅ Greenfield |
-| Reid | Local filesystem | ⏳ Needs Supabase Storage |
-| Notyced | Cloudflare R2 | ⏳ Needs Supabase Storage |
-| Prime | Local filesystem | ⏳ Needs Supabase Storage |
+| Reid | Local filesystem | ⏳ Needs implementation |
+| Notyced | Cloudflare R2 | ⏳ Needs migration to Railway-compatible solution |
+| Prime | Local filesystem | ⏳ Needs implementation |
 
 ## Implementation Plan
 
@@ -37,12 +37,12 @@ This architecture separates concerns: Railway handles structured data with excel
 4. Set up database migrations
 5. Configure `DATABASE_URL` environment variable
 
-**Storage Setup**:
-1. Create Supabase project for Settle
-2. Configure Supabase Storage buckets
-3. Install `@supabase/supabase-js` client using pnpm
-4. Implement file upload endpoints
-5. Add storage configuration to shared SDK
+**Frontend Setup**:
+1. Create Render web service for Settle
+2. Configure Next.js deployment on Render
+3. Set up environment variables in Render
+4. Configure build and start commands for pnpm
+5. Set up custom domain and SSL
 
 **Benefits**:
 - Clean implementation from scratch
@@ -61,12 +61,18 @@ This architecture separates concerns: Railway handles structured data with excel
 5. Remove Supabase database dependencies
 6. Test all database operations
 
-**Storage Migration**:
-1. Create Supabase Storage buckets
-2. Migrate existing local files to Supabase Storage
-3. Update upload endpoints to use Supabase Storage
+**Frontend Migration**:
+1. Create Render web service for Reid
+2. Migrate from current deployment to Render
+3. Configure pnpm build and start commands
+4. Set up environment variables
+5. Update custom domain and SSL
+
+**File Storage**:
+1. Implement file storage using Railway-compatible solution
+2. Migrate existing local files
+3. Update upload endpoints
 4. Remove local filesystem storage
-5. Update file serving logic
 
 **Benefits**:
 - Migration scripts already ready
@@ -86,11 +92,18 @@ This architecture separates concerns: Railway handles structured data with excel
 6. Remove Supabase database connection
 7. Test all TypeORM operations
 
+**Frontend Migration**:
+1. Create Render web service for Notyced
+2. Migrate from Render PostgreSQL to Railway for backend
+3. Keep frontend on Render (or migrate to Railway if preferred)
+4. Update environment variables
+5. Test all frontend operations
+
 **Storage Migration**:
 1. Export data from Cloudflare R2
-2. Create Supabase Storage buckets
-3. Import data to Supabase Storage
-4. Replace R2 client with Supabase Storage client
+2. Implement Railway-compatible storage solution
+3. Import data to new storage
+4. Replace R2 client with new storage client
 5. Update upload/download endpoints
 6. Remove R2 dependencies
 
@@ -113,12 +126,20 @@ This architecture separates concerns: Railway handles structured data with excel
 7. Gradual traffic migration (canary deployment)
 8. Monitor performance and rollback if needed
 
-**Storage Migration**:
+**Frontend Migration**:
+1. Create Render web service for Prime
+2. Migrate frontend from current deployment to Render
+3. Configure pnpm build and start commands
+4. Set up environment variables
+5. Test all frontend operations
+6. Update mobile app API endpoints
+
+**File Storage**:
 1. Audit all file upload endpoints
-2. Create Supabase Storage buckets
-3. Implement parallel storage (write to both local and Supabase)
-4. Migrate existing files to Supabase Storage
-5. Update all upload endpoints to Supabase Storage
+2. Implement Railway-compatible storage solution
+3. Implement parallel storage (write to both local and new storage)
+4. Migrate existing files to new storage
+5. Update all upload endpoints
 6. Remove local filesystem storage
 7. Update mobile app upload logic
 
@@ -165,81 +186,131 @@ healthcheckPath = "/health"
 # DATABASE_URL auto-injected when PostgreSQL service is added
 ```
 
-### Supabase Storage Configuration
+### Render Frontend Configuration
 
 **Environment Variables**:
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# Render auto-injects these for build
+NEXT_PUBLIC_API_URL=https://api.project.railway.app
+NODE_ENV=production
 ```
 
-**Supabase Client** (Standard Pattern):
+**render.yaml** (Standard Pattern):
+```yaml
+services:
+  - type: web
+    name: project-web
+    env: node
+    buildCommand: pnpm install && pnpm run build
+    startCommand: pnpm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://api.project.railway.app
+```
+
+**Root Directory Configuration**:
+```
+Root Directory: project-web
+Build Command: pnpm install && pnpm run build
+Start Command: pnpm start
+```
+
+### File Storage Strategy
+
+**For file storage, use Railway-compatible solutions:**
+
+1. **Railway Volumes** - For persistent disk storage
+2. **S3-compatible services** - Railway integrates with various S3 alternatives
+3. **Local storage during development** - For testing
+4. **Cloud storage services** - For production (AWS S3, DigitalOcean Spaces, etc.)
+
+**Standard Pattern**:
 ```typescript
-import { createClient } from '@supabase/supabase-js';
+// Development: Local filesystem
+const UPLOAD_DIR = process.env.NODE_ENV === 'development' 
+  ? './uploads' 
+  : '/data/uploads';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
-
-// Storage operations
-const { data, error } = await supabase.storage
-  .from('bucket-name')
-  .upload('path/to/file', file);
-```
-
-**Buckets Structure** (Standard Pattern):
-```
-project-storage/
-├── avatars/          # User profile pictures
-├── documents/        # User documents
-├── media/           # General media files
-└── temp/           # Temporary uploads
+// Production: Railway volumes or cloud storage
+const storageProvider = process.env.STORAGE_PROVIDER || 'local';
 ```
 
 ## Shared SDK Storage Integration
 
 ### Update @settle/shared-sdk
 
-**Add Storage Module**:
+**Add Storage Module** (Railway-compatible):
 ```typescript
 // packages/shared-sdk/src/storage/index.ts
-import { createClient } from '@supabase/supabase-js';
-
 export interface StorageConfig {
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-  bucket: string;
+  provider: 'local' | 'railway-volume' | 's3';
+  localDir?: string;
+  s3Config?: {
+    endpoint: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+    bucket: string;
+    region?: string;
+  };
 }
 
 export function createStorageClient(config: StorageConfig) {
-  const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
+  if (config.provider === 'local') {
+    return {
+      upload: async (path: string, file: Buffer) => {
+        // Local filesystem implementation
+        const fs = await import('fs/promises');
+        const filePath = `${config.localDir || './uploads'}/${path}`;
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
+        await fs.writeFile(filePath, file);
+        return { path: filePath };
+      },
+      getPublicUrl: (path: string) => {
+        return `${process.env.APP_URL}/uploads/${path}`;
+      },
+      delete: async (path: string) => {
+        const fs = await import('fs/promises');
+        const filePath = `${config.localDir || './uploads'}/${path}`;
+        await fs.unlink(filePath);
+      }
+    };
+  }
 
-  return {
-    upload: async (path: string, file: File) => {
-      const { data, error } = await supabase.storage
-        .from(config.bucket)
-        .upload(path, file);
-      
-      if (error) throw error;
-      return data;
-    },
+  if (config.provider === 's3' && config.s3Config) {
+    // S3-compatible implementation (AWS S3, DigitalOcean Spaces, etc.)
+    const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = await import('@aws-sdk/client-s3');
     
-    getPublicUrl: (path: string) => {
-      const { data } = supabase.storage
-        .from(config.bucket)
-        .getPublicUrl(path);
-      return data.publicUrl;
-    },
-    
-    delete: async (path: string) => {
-      const { error } = await supabase.storage
-        .from(config.bucket)
-        .remove([path]);
-      if (error) throw error;
-    }
-  };
+    const s3Client = new S3Client({
+      endpoint: config.s3Config.endpoint,
+      credentials: {
+        accessKeyId: config.s3Config.accessKeyId,
+        secretAccessKey: config.s3Config.secretAccessKey,
+      },
+      region: config.s3Config.region || 'us-east-1',
+    });
+
+    return {
+      upload: async (path: string, file: Buffer) => {
+        await s3Client.send(new PutObjectCommand({
+          Bucket: config.s3Config.bucket,
+          Key: path,
+          Body: file,
+        }));
+        return { path };
+      },
+      getPublicUrl: (path: string) => {
+        return `${config.s3Config.endpoint}/${config.s3Config.bucket}/${path}`;
+      },
+      delete: async (path: string) => {
+        await s3Client.send(new DeleteObjectCommand({
+          Bucket: config.s3Config.bucket,
+          Key: path,
+        }));
+      }
+    };
+  }
+
+  throw new Error(`Unsupported storage provider: ${config.provider}`);
 }
 ```
 
@@ -298,18 +369,13 @@ migrateDatabase();
 
 ```typescript
 // scripts/migrate-storage.ts
-import { createClient } from '@supabase/supabase-js';
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 
 async function migrateStorage() {
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-
   const localDir = process.env.LOCAL_UPLOAD_DIR || './uploads';
-  const bucket = process.env.SUPABASE_BUCKET || 'project-storage';
+  const targetProvider = process.env.TARGET_STORAGE_PROVIDER || 'local';
+  const targetDir = process.env.TARGET_UPLOAD_DIR || '/data/uploads';
 
   try {
     const files = await readdir(localDir);
@@ -318,17 +384,32 @@ async function migrateStorage() {
       const filePath = join(localDir, file);
       const fileBuffer = await readFile(filePath);
       
-      console.log(`Uploading ${file}...`);
+      console.log(`Migrating ${file}...`);
       
-      const { error } = await supabase.storage
-        .from(bucket)
-        .upload(file, fileBuffer);
-      
-      if (error) {
-        console.error(`Failed to upload ${file}:`, error);
-      } else {
-        console.log(`Successfully uploaded ${file}`);
+      if (targetProvider === 'local') {
+        const fs = await import('fs/promises');
+        const targetPath = join(targetDir, file);
+        await fs.mkdir(path.dirname(targetPath), { recursive: true });
+        await fs.writeFile(targetPath, fileBuffer);
+      } else if (targetProvider === 's3') {
+        // S3 migration logic
+        const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+        const s3Client = new S3Client({
+          endpoint: process.env.S3_ENDPOINT,
+          credentials: {
+            accessKeyId: process.env.S3_ACCESS_KEY_ID,
+            secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+          },
+        });
+        
+        await s3Client.send(new PutObjectCommand({
+          Bucket: process.env.S3_BUCKET,
+          Key: file,
+          Body: fileBuffer,
+        }));
       }
+      
+      console.log(`Successfully migrated ${file}`);
     }
     
     console.log('Storage migration completed');
@@ -343,40 +424,50 @@ migrateStorage();
 
 ## Cost Analysis
 
-### Railway PostgreSQL Costs
+### Railway Costs
 - **Free Tier**: $5/month credit (includes 1x PostgreSQL)
 - **Starter**: $5/month for additional services
 - **Standard**: $20/month for production
 
-### Supabase Storage Costs
-- **Free Tier**: 1GB storage, 2GB bandwidth/month
-- **Pro**: $25/month for 100GB storage, 200GB bandwidth
-- **Enterprise**: Custom pricing
+### Render Costs
+- **Free Tier**: $0/month (web services spin down after inactivity)
+- **Starter**: $7/month (512MB RAM, 0.5 CPU)
+- **Standard**: $25/month (2GB RAM, 1 CPU)
+- **Pro**: $85/month (4GB RAM, 2 CPU)
+
+### Storage Costs
+- **Railway Volumes**: Included with service pricing
+- **S3-compatible services**: Varies by provider
+  - AWS S3: $0.023/GB storage + $0.09/GB transfer
+  - DigitalOcean Spaces: $0.02/GB storage + $0.01/GB transfer
 
 ### Total Estimated Monthly Costs
-- **Development**: $0 (Railway free tier + Supabase free tier)
-- **Production**: $45-70/month (Railway Standard + Supabase Pro)
+- **Development**: $0 (Railway free tier + Render free tier)
+- **Production**: $25-45/month (Railway Standard + Render Starter)
 
 ## Benefits of This Architecture
 
 ### 1. **Separation of Concerns**
-- Railway: Optimized for PostgreSQL, connection pooling, backups
-- Supabase Storage: Optimized for file storage, CDN, S3-compatible API
+- Railway: Optimized for PostgreSQL, connection pooling, backups, backend services
+- Render: Optimized for Next.js frontend applications, static site generation, edge network
 
 ### 2. **Cost Efficiency**
-- Railway: Excellent value for PostgreSQL
-- Supabase Storage: Competitive pricing with built-in CDN
+- Railway: Excellent value for PostgreSQL and backend services
+- Render: Competitive pricing for frontend with free tier for development
+- Storage: Flexible options from local to cloud S3-compatible services
 
 ### 3. **Developer Experience**
-- Railway: Easy database management, automatic backups
-- Supabase Storage: Simple API, built-in image optimization
+- Railway: Easy database management, automatic backups, private networking
+- Render: Excellent Next.js support, automatic SSL, custom domains
+- Storage: Multiple options depending on needs and budget
 
 ### 4. **Scalability**
-- Railway: Easy vertical scaling, read replicas
-- Supabase Storage: Automatic CDN, global edge network
+- Railway: Easy vertical scaling, read replicas, service composition
+- Render: Automatic scaling, global edge network, CDN
+- Storage: Scale from local volumes to cloud S3 as needed
 
 ### 5. **Consistency**
-- All projects use same database/storage stack
+- All projects use same backend (Railway) and frontend (Render) stack
 - Shared knowledge and tooling
 - Easier cross-project maintenance
 
@@ -393,6 +484,7 @@ migrateStorage();
 - **Broken Links**: Update all file references in database
 - **Performance**: Test file upload/download speeds
 - **Cost**: Monitor storage usage and bandwidth
+- **Storage Provider**: Choose appropriate storage solution (local vs cloud)
 
 ## Success Criteria
 
