@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createJsonApiClient, normalizeApiBaseUrl } from '@settle/shared-sdk/auth';
+import { storeAuth, isAuthenticated, clearAuth } from '../../lib/authUtils';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,32 +12,38 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Redirect if already authenticated
+  if (typeof window !== 'undefined' && isAuthenticated()) {
+    router.push('/profile');
+    return null;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const apiCall = createJsonApiClient({
+        getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'https://api.settleinpeace.com',
+        getToken: () => null,
+        onUnauthorized: () => {
+          clearAuth();
+          router.push('/login');
         },
+      });
+
+      const response = await apiCall('/auth/login', {
+        method: 'POST',
         body: JSON.stringify({ email, password }),
       });
 
-      if (!response.ok) {
-        throw new Error('Login failed');
+      if (response.success) {
+        storeAuth(response.accessToken, response.user);
+        router.push('/profile');
+      } else {
+        setError(response.error || 'Login failed');
       }
-
-      const data = await response.json();
-      
-      // Store tokens in localStorage
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      
-      // Redirect to profile page
-      router.push('/profile');
     } catch (err) {
       setError('Invalid email or password');
     } finally {

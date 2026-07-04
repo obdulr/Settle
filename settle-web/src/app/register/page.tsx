@@ -2,18 +2,27 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createJsonApiClient } from '@settle/shared-sdk/auth';
+import { storeAuth, isValidEmail, clearAuth } from '../../lib/authUtils';
 
 export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!isValidEmail(email)) {
+      setError('Please enter a valid email');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -28,26 +37,31 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const apiCall = createJsonApiClient({
+        getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'https://api.settleinpeace.com',
+        getToken: () => null,
+        onUnauthorized: () => {
+          clearAuth();
+          router.push('/login');
         },
-        body: JSON.stringify({ email, password }),
       });
 
-      if (!response.ok) {
-        throw new Error('Registration failed');
-      }
+      const response = await apiCall('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          email, 
+          password,
+          firstName,
+          lastName,
+        }),
+      });
 
-      const data = await response.json();
-      
-      // Store tokens in localStorage
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      
-      // Redirect to profile page
-      router.push('/profile');
+      if (response.success) {
+        storeAuth(response.accessToken, response.user);
+        router.push('/profile');
+      } else {
+        setError(response.error || 'Registration failed');
+      }
     } catch (err) {
       setError('Registration failed. Email may already be in use.');
     } finally {
@@ -77,6 +91,32 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="firstName" className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              First Name
+            </label>
+            <input
+              type="text"
+              id="firstName"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="lastName" className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Last Name
+            </label>
+            <input
+              type="text"
+              id="lastName"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
               className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800 dark:text-white"
             />
           </div>

@@ -2,11 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createJsonApiClient } from '@settle/shared-sdk/auth';
+import { getStoredToken, getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
 
 interface UserProfile {
   id: string;
   email: string;
-  createdAt: string;
+  role?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  createdAt?: string;
 }
 
 export default function ProfilePage() {
@@ -16,8 +22,13 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && !isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+
     const fetchProfile = async () => {
-      const token = localStorage.getItem('access_token');
+      const token = getStoredToken();
       
       if (!token) {
         router.push('/login');
@@ -25,24 +36,20 @@ export default function ProfilePage() {
       }
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
+        const apiCall = createJsonApiClient({
+          getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'https://api.settleinpeace.com',
+          getToken: () => token,
+          onUnauthorized: () => {
+            clearAuth();
+            router.push('/login');
           },
         });
 
-        if (!response.ok) {
-          if (response.status === 401 || response.status === 403) {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            router.push('/login');
-            return;
-          }
-          throw new Error('Failed to fetch profile');
-        }
+        const response = await apiCall('/auth/profile', {
+          method: 'GET',
+        });
 
-        const data = await response.json();
-        setUser(data);
+        setUser(response);
       } catch (err) {
         setError('Failed to load profile');
       } finally {
@@ -54,8 +61,7 @@ export default function ProfilePage() {
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    clearAuth();
     router.push('/');
   };
 
@@ -91,6 +97,28 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {user.firstName && (
+              <div>
+                <label className="block mb-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  First Name
+                </label>
+                <div className="px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded text-black dark:text-white">
+                  {user.firstName}
+                </div>
+              </div>
+            )}
+
+            {user.lastName && (
+              <div>
+                <label className="block mb-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  Last Name
+                </label>
+                <div className="px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded text-black dark:text-white">
+                  {user.lastName}
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block mb-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">
                 User ID
@@ -100,14 +128,27 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div>
-              <label className="block mb-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                Member Since
-              </label>
-              <div className="px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded text-black dark:text-white">
-                {new Date(user.createdAt).toLocaleDateString()}
+            {user.role && (
+              <div>
+                <label className="block mb-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  Role
+                </label>
+                <div className="px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded text-black dark:text-white">
+                  {user.role}
+                </div>
               </div>
-            </div>
+            )}
+
+            {user.createdAt && (
+              <div>
+                <label className="block mb-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  Member Since
+                </label>
+                <div className="px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded text-black dark:text-white">
+                  {new Date(user.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+            )}
 
             <button
               onClick={handleLogout}

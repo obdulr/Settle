@@ -1,10 +1,30 @@
 // Authentication utilities following Prime pattern
 
-export interface ApiClientConfig {
-  baseUrl: string;
-  getToken: () => string | null;
+export interface AuthUser {
+  id: string;
+  email: string;
+  role?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  createdAt?: string;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  user?: AuthUser;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+  error?: string;
+}
+
+export interface CreateJsonApiClientOptions {
+  getBaseUrl: () => string | Promise<string>;
+  getToken?: () => string | null | Promise<string | null>;
   onUnauthorized?: () => void;
   timeout?: number;
+  defaultHeaders?: Record<string, string>;
 }
 
 export function normalizeApiBaseUrl(url: string): string {
@@ -21,32 +41,34 @@ export function normalizeApiBaseUrl(url: string): string {
   return normalized;
 }
 
-export function createJsonApiClient(config: ApiClientConfig) {
-  const normalizedBaseUrl = normalizeApiBaseUrl(config.baseUrl);
-  const timeout = config.timeout || 25000;
+export function createJsonApiClient(options: CreateJsonApiClientOptions) {
+  const timeout = options.timeout || 25000;
 
-  async function request<T>(
+  return async function jsonApiCall<T>(
     endpoint: string,
-    options: RequestInit = {}
+    requestOptions: RequestInit = {}
   ): Promise<T> {
-    const token = config.getToken();
+    const [baseUrl, token] = await Promise.all([
+      options.getBaseUrl(),
+      options.getToken ? options.getToken() : Promise.resolve(null),
+    ]);
+    
+    const normalizedBaseUrl = normalizeApiBaseUrl(baseUrl);
     const url = `${normalizedBaseUrl}${endpoint}`;
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string> || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.defaultHeaders || {}),
+      ...(requestOptions.headers as Record<string, string> || {}),
     };
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
       const response = await fetch(url, {
-        ...options,
+        ...requestOptions,
         headers,
         signal: controller.signal,
       });
@@ -54,8 +76,8 @@ export function createJsonApiClient(config: ApiClientConfig) {
       clearTimeout(timeoutId);
 
       if (response.status === 401 || response.status === 403) {
-        if (config.onUnauthorized) {
-          config.onUnauthorized();
+        if (options.onUnauthorized) {
+          options.onUnauthorized();
         }
         throw new Error('Unauthorized');
       }
@@ -70,21 +92,5 @@ export function createJsonApiClient(config: ApiClientConfig) {
       clearTimeout(timeoutId);
       throw error;
     }
-  }
-
-  return {
-    get: <T>(endpoint: string) => request<T>(endpoint, { method: 'GET' }),
-    post: <T>(endpoint: string, data: unknown) =>
-      request<T>(endpoint, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    put: <T>(endpoint: string, data: unknown) =>
-      request<T>(endpoint, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }),
-    delete: <T>(endpoint: string) =>
-      request<T>(endpoint, { method: 'DELETE' }),
   };
 }

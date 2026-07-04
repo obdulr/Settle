@@ -15,7 +15,10 @@ export class User {
   role?: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  name?: string;
+  firstName?: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  lastName?: string;
 
   @Column({ length: 20, nullable: true })
   phone?: string;
