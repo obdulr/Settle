@@ -23,6 +23,20 @@ export default function Home() {
                 <li>GET /auth/profile - Get user profile (protected)</li>
               </ul>
             </div>
+            <div className="flex gap-4">
+              <a
+                href="/login"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-blue-600 px-5 text-white transition-colors hover:bg-blue-700"
+              >
+                Login
+              </a>
+              <a
+                href="/register"
+                className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
+              >
+                Register
+              </a>
+            </div>
           </div>
         </div>
       </main>
