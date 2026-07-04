@@ -3,16 +3,22 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { User } from '../entities/user.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { ThrottlerGuard } from './guards/throttle.guard';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
     PassportModule,
+    ThrottlerModule.forRoot([{
+      ttl: 60000, // 1 minute
+      limit: 10, // 10 requests per minute
+    }]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -25,7 +31,7 @@ import { LocalStrategy } from './strategies/local.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy],
+  providers: [AuthService, JwtStrategy, LocalStrategy, ThrottlerGuard],
   exports: [AuthService],
 })
 export class AuthModule {}

@@ -1,4 +1,5 @@
 import { Controller, Post, Body, UseGuards, Request, Get, UsePipes, ValidationPipe, Put } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -14,12 +15,14 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @UseGuards(LocalAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute for login
   @Post('login')
   async login(@Request() req) {
     return this.authService.login(req.user);
   }
 
   @UsePipes(new ValidationPipe())
+  @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 requests per hour for registration
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
@@ -32,23 +35,27 @@ export class AuthController {
   }
 
   @UsePipes(new ValidationPipe())
+  @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 requests per hour for password reset
   @Post('forgot-password')
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.authService.forgotPassword(forgotPasswordDto);
   }
 
   @UsePipes(new ValidationPipe())
+  @Throttle({ default: { limit: 5, ttl: 3600000 } }) // 5 requests per hour for reset
   @Post('reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
   }
 
   @UsePipes(new ValidationPipe())
+  @Throttle({ default: { limit: 5, ttl: 3600000 } }) // 5 requests per hour for verification
   @Post('verify-email')
   async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
     return this.authService.verifyEmail(verifyEmailDto);
   }
 
+  @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 requests per hour for resend
   @Post('resend-verification')
   async resendVerificationEmail(@Body() body: { email: string }) {
     return this.authService.resendVerificationEmail(body.email);
