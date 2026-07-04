@@ -4,7 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { User } from './entities/user.entity';
+import { Activity } from './entities/activity.entity';
 import { AuthModule } from './auth/auth.module';
+import { ActivitiesModule } from './activities/activities.module';
 
 @Module({
   imports: [
@@ -17,15 +19,16 @@ import { AuthModule } from './auth/auth.module';
       ssl: process.env.DATABASE_URL?.includes('railway') 
         ? { rejectUnauthorized: false }
         : false,
-      entities: [User],
+      entities: [User, Activity],
       synchronize: false,
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
       migrations: ['src/migrations/*.ts'],
       migrationsTableName: 'migrations',
     }),
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Activity]),
     AuthModule,
+    ActivitiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

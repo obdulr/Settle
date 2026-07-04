@@ -10,6 +10,7 @@ import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { VerifyEmailDto } from './dtos/verify-email.dto';
 import { UpdateProfileDto } from './dtos/update-profile.dto';
+import { ActivitiesService } from '../activities/activities.service';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +18,7 @@ export class AuthService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private jwtService: JwtService,
+    private activitiesService: ActivitiesService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -65,6 +67,14 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user);
     
+    // Log login activity
+    await this.activitiesService.createActivity(
+      user.id,
+      'login',
+      'User logged in',
+      { email: user.email }
+    );
+    
     return {
       success: true,
       accessToken: tokens.accessToken,
@@ -107,6 +117,14 @@ export class AuthService {
     });
 
     await this.usersRepository.save(user);
+
+    // Log registration activity
+    await this.activitiesService.createActivity(
+      user.id,
+      'register',
+      'User registered',
+      { email: user.email, firstName: user.firstName, lastName: user.lastName }
+    );
 
     // TODO: Send verification email
     // For now, return the token for testing
@@ -278,6 +296,14 @@ export class AuthService {
       email: updateProfileDto.email,
       phone: updateProfileDto.phone,
     });
+
+    // Log profile update activity
+    await this.activitiesService.createActivity(
+      userId,
+      'profile_update',
+      'User updated profile',
+      { changes: updateProfileDto }
+    );
 
     const updatedUser = await this.usersRepository.findOne({ where: { id: userId } });
     const { password: _, ...result } = updatedUser!;
