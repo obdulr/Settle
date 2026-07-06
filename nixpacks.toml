@@ -1,8 +1,12 @@
 [phases.setup]
-nixPkgs = ['nodejs-24', 'pnpm']
+nixPkgs = ['nodejs_24', 'pnpm']
 
 [phases.build]
-cmds = ['cd settle-api && pnpm install && pnpm run build']
+cmds = [
+  'corepack enable && corepack prepare pnpm@9.15.5 --activate',
+  'pnpm install --frozen-lockfile=false',
+  'cd settle-api && pnpm run build'
+]
 
 [start]
 cmd = 'cd settle-api && pnpm start'
