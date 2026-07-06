@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ['nodejs-24', 'pnpm']
+
+[phases.build]
+cmds = ['cd settle-api && pnpm install && pnpm run build']
+
+[start]
+cmd = 'cd settle-api && pnpm start'

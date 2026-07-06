@@ -20,15 +20,18 @@ import { LeadsModule } from './leads/leads.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL?.includes('railway')
-        ? { rejectUnauthorized: false }
-        : false,
+      ssl: process.env.DATABASE_URL?.includes('localhost')
+        ? false
+        : { rejectUnauthorized: false },
+      extra: {
+        ssl: process.env.DATABASE_URL?.includes('localhost')
+          ? false
+          : { rejectUnauthorized: false },
+      },
       entities: [User, Activity, Debt, Provider, Lead],
-      synchronize: false,
+      synchronize: process.env.NODE_ENV === 'development',
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
-      migrations: ['src/migrations/*.ts'],
-      migrationsTableName: 'migrations',
     }),
     TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead]),
     AuthModule,

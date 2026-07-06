@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Settle - Authentication & Account Management",
-  description: "Complete authentication system with user management",
+  title: "Settle In Peace — Compare Debt Relief Providers Side-by-Side",
+  description: "The first marketplace for debt relief. Take a free 2-minute assessment, compare vetted providers with transparent fees, and choose your path to financial peace. No pressure, no obligation.",
 };
 
 export default function RootLayout({

@@ -11,7 +11,11 @@ export class DebtsController {
 
   @Post()
   async createDebt(@Request() req, @Body() createDebtDto: CreateDebtDto) {
-    return this.debtsService.createDebt(req.user.sub, createDebtDto);
+    const { dueDate, ...rest } = createDebtDto;
+    return this.debtsService.createDebt(req.user.sub, {
+      ...rest,
+      ...(dueDate ? { dueDate: new Date(dueDate) } : {}),
+    });
   }
 
   @Get()
@@ -31,7 +35,11 @@ export class DebtsController {
 
   @Put(':id')
   async updateDebt(@Param('id') id: string, @Request() req, @Body() updateDebtDto: UpdateDebtDto) {
-    return this.debtsService.updateDebt(id, req.user.sub, updateDebtDto);
+    const { dueDate, ...rest } = updateDebtDto;
+    return this.debtsService.updateDebt(id, req.user.sub, {
+      ...rest,
+      ...(dueDate ? { dueDate: new Date(dueDate) } : {}),
+    });
   }
 
   @Delete(':id')

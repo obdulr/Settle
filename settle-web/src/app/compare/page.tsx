@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 interface Provider {
   id: string;
@@ -23,70 +24,6 @@ interface Provider {
   yearsInBusiness?: number;
   website?: string;
 }
-
-// Placeholder data until real providers sign up
-const PLACEHOLDER_PROVIDERS: Provider[] = [
-  {
-    id: '1',
-    companyName: 'Freedom Debt Relief',
-    description: 'One of the largest debt settlement companies in the US, with over 850,000 clients helped.',
-    serviceTypes: ['debt_settlement'],
-    debtTypes: ['credit_card', 'medical', 'personal_loan'],
-    statesServed: ['CA','TX','FL','NY','IL','PA','OH','GA','NC','MI'],
-    minDebtAmount: 7500,
-    feePercentage: 18,
-    bbbRating: 'A+',
-    avgRating: 4.5,
-    reviewCount: 28000,
-    successfulSettlements: 850000,
-    avgSettlementDays: 730,
-    avgSavingsPercentage: 45,
-    isAfccMember: true,
-    isIapdaMember: true,
-    yearsInBusiness: 22,
-    website: 'https://freedomdebtrelief.com',
-  },
-  {
-    id: '2',
-    companyName: 'Pacific Debt Relief',
-    description: 'Boutique firm with personalized service, known for high client satisfaction and low fees.',
-    serviceTypes: ['debt_settlement'],
-    debtTypes: ['credit_card', 'medical', 'personal_loan', 'business'],
-    statesServed: ['CA','TX','FL','NY','AZ','NV','WA','OR'],
-    minDebtAmount: 10000,
-    feePercentage: 15,
-    bbbRating: 'A+',
-    avgRating: 4.8,
-    reviewCount: 4200,
-    successfulSettlements: 35000,
-    avgSettlementDays: 660,
-    avgSavingsPercentage: 52,
-    isAfccMember: true,
-    isIapdaMember: false,
-    yearsInBusiness: 18,
-    website: 'https://pacificdebt.com',
-  },
-  {
-    id: '3',
-    companyName: 'ClearOne Advantage',
-    description: 'Transparent pricing, no hidden fees, and a dedicated account manager for every client.',
-    serviceTypes: ['debt_settlement', 'debt_consolidation'],
-    debtTypes: ['credit_card', 'medical', 'personal_loan'],
-    statesServed: ['AL','AZ','AR','CA','CO','FL','GA','ID','IL','IN','KS','KY','LA','MD'],
-    minDebtAmount: 7500,
-    feePercentage: 20,
-    bbbRating: 'A',
-    avgRating: 4.3,
-    reviewCount: 9800,
-    successfulSettlements: 75000,
-    avgSettlementDays: 780,
-    avgSavingsPercentage: 38,
-    isAfccMember: true,
-    isIapdaMember: true,
-    yearsInBusiness: 15,
-    website: 'https://clearoneadvantage.com',
-  },
-];
 
 const STARS = (rating?: number) => {
   if (!rating) return null;
@@ -113,10 +50,9 @@ export default function ComparePage() {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025'}/providers`);
         const data = await res.json();
-        setProviders(data.length > 0 ? data : PLACEHOLDER_PROVIDERS);
+        setProviders(data);
       } catch {
-        // Use placeholder data when API isn't connected yet
-        setProviders(PLACEHOLDER_PROVIDERS);
+        setProviders([]);
       } finally {
         setLoading(false);
       }
@@ -151,168 +87,217 @@ export default function ComparePage() {
           </p>
         </div>
 
-        {/* Sort controls */}
-        <div className="flex items-center gap-3 mb-6">
-          <span className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">Sort by:</span>
-          {(['rating', 'fee', 'savings'] as const).map(opt => (
-            <button
-              key={opt}
-              onClick={() => setSortBy(opt)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all ${
-                sortBy === opt
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-blue-400'
-              }`}
-            >
-              {opt === 'rating' ? 'Highest Rated' : opt === 'fee' ? 'Lowest Fee' : 'Most Savings'}
-            </button>
-          ))}
-        </div>
-
-        {/* Provider cards */}
-        {loading ? (
+        {/* Loading state */}
+        {loading && (
           <div className="text-center py-20 text-zinc-500">Loading providers...</div>
-        ) : (
-          <div className="space-y-6">
-            {sorted.map((p, index) => (
-              <div
-                key={p.id}
-                className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-md overflow-hidden border-2 ${
-                  index === 0 ? 'border-blue-500' : 'border-transparent'
-                }`}
+        )}
+
+        {/* Empty state — no providers yet */}
+        {!loading && providers.length === 0 && (
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-100 dark:border-zinc-800 p-12 text-center">
+            <div className="w-20 h-20 bg-blue-50 dark:bg-blue-950 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-black dark:text-white mb-3">
+              Our provider network is being built
+            </h2>
+            <p className="text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto mb-8">
+              We're currently onboarding vetted debt relief providers. In the meantime, you can take the free assessment — we'll notify you as soon as providers are available to match with your profile.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/assessment"
+                className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all"
               >
-                {index === 0 && (
-                  <div className="bg-blue-600 text-white text-center text-xs font-semibold py-1.5 tracking-wide">
-                    BEST MATCH — Highest Rated
-                  </div>
-                )}
-                <div className="p-6">
-                  <div className="flex flex-col md:flex-row md:items-start gap-6">
+                Take the Free Assessment →
+              </Link>
+              <Link
+                href="/providers"
+                className="px-8 py-3 border-2 border-blue-600 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950 transition-all"
+              >
+                I'm a Provider — Join the Network
+              </Link>
+            </div>
 
-                    {/* Company info */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h2 className="text-xl font-bold text-black dark:text-white">{p.companyName}</h2>
-                          <div className="flex items-center gap-2 mt-1">
-                            {p.avgRating && (
-                              <>
-                                {STARS(p.avgRating)}
-                                <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                                  {p.avgRating} ({p.reviewCount?.toLocaleString()} reviews)
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        {p.bbbRating && (
-                          <div className="text-center">
-                            <div className="text-2xl font-black text-green-600">{p.bbbRating}</div>
-                            <div className="text-xs text-zinc-500">BBB Rating</div>
-                          </div>
-                        )}
-                      </div>
-
-                      {p.description && (
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-3">{p.description}</p>
-                      )}
-
-                      {/* Certifications */}
-                      <div className="flex gap-2 mt-3 flex-wrap">
-                        {p.isAfccMember && (
-                          <span className="text-xs bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 px-2 py-1 rounded-full border border-green-200 dark:border-green-800">
-                            ✓ AFCC Member
-                          </span>
-                        )}
-                        {p.isIapdaMember && (
-                          <span className="text-xs bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 px-2 py-1 rounded-full border border-green-200 dark:border-green-800">
-                            ✓ IAPDA Member
-                          </span>
-                        )}
-                        {p.yearsInBusiness && (
-                          <span className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-2 py-1 rounded-full">
-                            {p.yearsInBusiness} years in business
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Stats grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:min-w-[420px]">
-                      <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-3 text-center">
-                        <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                          {p.feePercentage ? `${p.feePercentage}%` : 'Varies'}
-                        </div>
-                        <div className="text-xs text-zinc-500 mt-1">Service Fee</div>
-                      </div>
-                      <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-3 text-center">
-                        <div className="text-2xl font-black text-green-600 dark:text-green-400">
-                          {p.avgSavingsPercentage ? `${p.avgSavingsPercentage}%` : '—'}
-                        </div>
-                        <div className="text-xs text-zinc-500 mt-1">Avg Savings</div>
-                      </div>
-                      <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-3 text-center">
-                        <div className="text-2xl font-black text-zinc-700 dark:text-zinc-300">
-                          {p.avgSettlementDays ? `${Math.round(p.avgSettlementDays / 30)}mo` : '—'}
-                        </div>
-                        <div className="text-xs text-zinc-500 mt-1">Avg Timeline</div>
-                      </div>
-                      <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-3 text-center">
-                        <div className="text-2xl font-black text-zinc-700 dark:text-zinc-300">
-                          ${p.minDebtAmount?.toLocaleString()}
-                        </div>
-                        <div className="text-xs text-zinc-500 mt-1">Min Debt</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* What they handle */}
-                  {p.debtTypes && p.debtTypes.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-wrap gap-2 items-center">
-                      <span className="text-xs text-zinc-500 font-medium">Handles:</span>
-                      {p.debtTypes.map(t => (
-                        <span key={t} className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-2 py-0.5 rounded">
-                          {t.replace(/_/g, ' ')}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* CTA */}
-                  <div className="mt-5 flex gap-3">
-                    <a
-                      href="/assessment"
-                      className="flex-1 py-2.5 px-5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 text-center text-sm"
-                    >
-                      Get Matched with {p.companyName.split(' ')[0]} →
-                    </a>
-                    {p.website && (
-                      <a
-                        href={p.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="py-2.5 px-5 border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm"
-                      >
-                        Visit Site
-                      </a>
-                    )}
-                  </div>
+            {/* What you'll see when providers join */}
+            <div className="mt-12 text-left">
+              <h3 className="text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-4 text-center">
+                Here's what the comparison will look like once providers join:
+              </h3>
+              <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl overflow-hidden border border-zinc-100 dark:border-zinc-800">
+                <div className="bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 text-xs font-semibold text-center py-2">
+                  Illustrative example — not real data
                 </div>
+                <div className="grid grid-cols-4 bg-blue-600 text-white text-sm font-semibold">
+                  <div className="p-4">Provider</div>
+                  <div className="p-4 text-center">Fee</div>
+                  <div className="p-4 text-center">Avg. Savings</div>
+                  <div className="p-4 text-center">Timeline</div>
+                </div>
+                {[
+                  { name: 'Provider A', fee: '15%', savings: '50%', timeline: '24 mo' },
+                  { name: 'Provider B', fee: '18%', savings: '45%', timeline: '22 mo' },
+                  { name: 'Provider C', fee: '20%', savings: '38%', timeline: '26 mo' },
+                ].map(p => (
+                  <div key={p.name} className="grid grid-cols-4 border-t border-zinc-100 dark:border-zinc-800 text-sm">
+                    <div className="p-4 font-semibold text-black dark:text-white">{p.name}</div>
+                    <div className="p-4 text-center font-bold text-blue-600 dark:text-blue-400">{p.fee}</div>
+                    <div className="p-4 text-center font-bold text-green-600 dark:text-green-400">{p.savings}</div>
+                    <div className="p-4 text-center text-zinc-600 dark:text-zinc-400">{p.timeline}</div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         )}
 
-        {/* Bottom disclaimer */}
-        <div className="mt-10 text-center text-xs text-zinc-400 dark:text-zinc-600 max-w-2xl mx-auto">
-          <p>
-            Settle In Peace receives compensation from partner providers. This may affect which providers are featured and their order. All fees, ratings, and statistics are disclosed transparently. Debt settlement may negatively impact your credit score. Forgiven debt may be taxable. Results vary.
-          </p>
-          <p className="mt-2">
-            Not yet a partner?{' '}
-            <a href="/providers" className="text-blue-500 hover:underline">Apply to list your company →</a>
-          </p>
-        </div>
+        {/* Provider cards — shown when providers exist */}
+        {!loading && providers.length > 0 && (
+          <>
+            {/* Sort controls */}
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">Sort by:</span>
+              {(['rating', 'fee', 'savings'] as const).map(opt => (
+                <button
+                  key={opt}
+                  onClick={() => setSortBy(opt)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                    sortBy === opt
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-blue-400'
+                  }`}
+                >
+                  {opt === 'rating' ? 'Highest Rated' : opt === 'fee' ? 'Lowest Fee' : 'Most Savings'}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-6">
+              {sorted.map((p, index) => (
+                <div
+                  key={p.id}
+                  className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-md overflow-hidden border-2 ${
+                    index === 0 ? 'border-blue-500' : 'border-transparent'
+                  }`}
+                >
+                  {index === 0 && (
+                    <div className="bg-blue-600 text-white text-center text-xs font-semibold py-1.5 tracking-wide">
+                      BEST MATCH — Highest Rated
+                    </div>
+                  )}
+                  <div className="p-6">
+                    <div className="flex flex-col md:flex-row md:items-start gap-6">
+
+                      {/* Company info */}
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h2 className="text-xl font-bold text-black dark:text-white">{p.companyName}</h2>
+                            <div className="flex items-center gap-2 mt-1">
+                              {p.avgRating && (
+                                <>
+                                  {STARS(p.avgRating)}
+                                  <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                                    {p.avgRating} ({p.reviewCount?.toLocaleString()} reviews)
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          {p.bbbRating && (
+                            <div className="text-center">
+                              <div className="text-2xl font-black text-green-600">{p.bbbRating}</div>
+                              <div className="text-xs text-zinc-500">BBB Rating</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {p.description && (
+                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-3">{p.description}</p>
+                        )}
+
+                        {/* Key stats */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5">
+                          {p.feePercentage && (
+                            <div>
+                              <div className="text-xs text-zinc-500">Fee</div>
+                              <div className="text-lg font-bold text-blue-600">{p.feePercentage}%</div>
+                            </div>
+                          )}
+                          {p.avgSavingsPercentage && (
+                            <div>
+                              <div className="text-xs text-zinc-500">Avg. Savings</div>
+                              <div className="text-lg font-bold text-green-600">{p.avgSavingsPercentage}%</div>
+                            </div>
+                          )}
+                          {p.avgSettlementDays && (
+                            <div>
+                              <div className="text-xs text-zinc-500">Timeline</div>
+                              <div className="text-lg font-bold text-zinc-700 dark:text-zinc-300">
+                                {Math.round(p.avgSettlementDays / 30)} mo
+                              </div>
+                            </div>
+                          )}
+                          {p.yearsInBusiness && (
+                            <div>
+                              <div className="text-xs text-zinc-500">In Business</div>
+                              <div className="text-lg font-bold text-zinc-700 dark:text-zinc-300">
+                                {p.yearsInBusiness} yrs
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Certifications */}
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {p.isAfccMember && (
+                            <span className="text-xs bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 px-2 py-1 rounded-full font-medium">
+                              AFCC Member
+                            </span>
+                          )}
+                          {p.isIapdaMember && (
+                            <span className="text-xs bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 px-2 py-1 rounded-full font-medium">
+                              IAPDA Certified
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* CTA */}
+                      <div className="md:w-48 flex flex-col gap-2">
+                        <div className="text-center md:text-left">
+                          <div className="text-xs text-zinc-500">Min. Debt</div>
+                          <div className="text-lg font-bold text-black dark:text-white">
+                            ${p.minDebtAmount.toLocaleString()}
+                          </div>
+                        </div>
+                        {p.website && (
+                          <a
+                            href={p.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-full py-2.5 px-4 bg-blue-600 text-white text-center text-sm font-bold rounded-lg hover:bg-blue-700 transition-all"
+                          >
+                            Visit Website →
+                          </a>
+                        )}
+                        <Link
+                          href="/assessment"
+                          className="block w-full py-2.5 px-4 border-2 border-blue-600 text-blue-600 dark:text-blue-400 text-center text-sm font-bold rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950 transition-all"
+                        >
+                          Check If I Qualify
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

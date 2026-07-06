@@ -27,10 +27,16 @@ This project uses **pnpm** as the package manager (NOT npm or yarn).
 
 ## Deployment Architecture
 
-**Backend**: Railway (PostgreSQL databases + API services)
-**Frontend**: Render (Next.js web applications)
+**Backend**: Railway (PostgreSQL database + NestJS API service)
+**Frontend**: Railway (Next.js web service)
 
-This architecture separates concerns: Railway handles all backend infrastructure including PostgreSQL databases and API services, while Render handles frontend web applications with excellent Next.js support and global edge network.
+Both services are deployed on Railway. The project uses two Railway services:
+1. **API service** — built from `settle-api/`, uses `railway.toml` at repo root
+2. **Web service** — built from `settle-web/`, uses `settle-web/railway.web.toml`
+3. **Postgres service** — Railway-managed PostgreSQL database
+
+The API connects to Postgres via `DATABASE_URL` (auto-injected by Railway).
+The web service connects to the API via `NEXT_PUBLIC_API_URL` (set in Railway dashboard).
 
 ## Port Assignments
 
@@ -39,8 +45,8 @@ This architecture separates concerns: Railway handles all backend infrastructure
 - **Backend (settle-api)**: Port 4025
 
 **Production URLs:**
-- **Frontend**: https://settle-e700.onrender.com
-- **Backend**: Railway service URL (configured in Railway dashboard)
+- **Frontend**: Railway web service URL (configured in Railway dashboard)
+- **Backend**: Railway API service URL (configured in Railway dashboard)
 
 **Environment Variables:**
 - `NEXT_PUBLIC_API_URL`: Backend API URL for frontend
