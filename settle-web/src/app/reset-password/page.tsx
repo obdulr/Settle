@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createJsonApiClient } from '@settle/shared-sdk/auth';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') || '';
@@ -39,7 +39,7 @@ export default function ResetPasswordPage() {
         getToken: () => null,
       });
 
-      const response = await apiCall('/auth/reset-password', {
+      const response = await apiCall<{ success: boolean; message?: string; error?: string }>('/auth/reset-password', {
         method: 'POST',
         body: JSON.stringify({ token, password, confirmPassword }),
       });
@@ -118,5 +118,13 @@ export default function ResetPasswordPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

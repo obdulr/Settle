@@ -381,13 +381,12 @@ export default function Home() {
       </section>
 
       {/* ============================================================
-          FAQ SECTION
-          - Honest answers, including "are you a real company?"
+          FAQ SECTION — compact two-column grid
           ============================================================ */}
-      <section className="py-20 px-4 bg-white dark:bg-black">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-black text-black dark:text-white text-center mb-12">Frequently asked questions</h2>
-          <div className="space-y-4">
+      <section className="py-16 px-4 bg-white dark:bg-black">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl font-black text-black dark:text-white text-center mb-8">Frequently asked questions</h2>
+          <div className="grid md:grid-cols-2 gap-3">
             {[
               {
                 q: 'Is this really free?',
@@ -395,39 +394,39 @@ export default function Home() {
               },
               {
                 q: 'Are you a debt settlement company?',
-                a: 'No. We are not a direct debt settlement provider. We are a marketplace that connects you with third-party debt relief companies. We do not negotiate on your behalf or hold your funds.',
+                a: 'No. We are a marketplace that connects you with third-party debt relief companies. We do not negotiate on your behalf or hold your funds.',
               },
               {
                 q: 'How is this different from other debt relief sites?',
-                a: "Other sites send your information to one company and hope for the best. We're building a marketplace where you can see multiple providers side-by-side with transparent fees, timelines, and success rates — so you can make an informed decision instead of being sold to.",
+                a: "Other sites send your info to one company. We show you multiple providers side-by-side with transparent fees, timelines, and success rates — so you choose instead of being sold to.",
               },
               {
                 q: 'You\'re a new company. Can I trust you?',
-                a: "Fair question. We're transparent about being new. We don't have thousands of reviews or decades of history — yet. What we do have is a commitment to honesty: no fake stats, no high-pressure sales, and no hidden fees. We make money when providers pay us for qualified leads, and we disclose that openly. If that approach resonates with you, we'd love to have you as an early user.",
+                a: "Fair question. We're transparent about being new — no fake stats, no high-pressure sales, no hidden fees. We make money when providers pay us for qualified leads, and we disclose that openly.",
               },
               {
                 q: 'Will this affect my credit score?',
-                a: 'Debt settlement can negatively impact your credit score in the short term. However, our providers are transparent about this upfront, and many clients see their scores recover and improve after becoming debt-free. We show you the full picture before you decide.',
+                a: 'Debt settlement can negatively impact your credit score short-term. Our providers are transparent about this upfront, and many clients see scores recover after becoming debt-free.',
               },
               {
                 q: 'What if I don\'t qualify for debt settlement?',
-                a: "If your debt is under $7,500 or you don't qualify for settlement, we plan to offer a financial coaching subscription that includes budgeting tools, debt payoff calculators, and credit monitoring. We won't turn anyone away without pointing you to a resource that can help.",
+                a: "If your debt is under $7,500 or you don't qualify, we plan to offer a financial coaching subscription with budgeting tools, debt payoff calculators, and credit monitoring.",
               },
               {
                 q: 'Are the providers on your platform vetted?',
-                a: 'Every provider in our network must have active state licensing, a BBB rating of B or above, and be a member of AFCC or IAPDA. We verify their success rates and display them transparently on our comparison page. We are currently building our provider network.',
+                a: 'Every provider must have active state licensing, a BBB rating of B or above, and be a member of AFCC or IAPDA. We verify success rates and display them transparently.',
               },
               {
                 q: 'How long does the process take?',
-                a: 'The assessment takes 2 minutes. Most debt settlement programs run 24-48 months, but we show you each provider\'s average timeline upfront so you can choose what works for your situation.',
+                a: 'The assessment takes 2 minutes. Most debt settlement programs run 24-48 months. We show each provider\'s average timeline upfront so you can choose what works for you.',
               },
             ].map((faq, idx) => (
-              <details key={idx} className="group bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-                <summary className="flex items-center justify-between p-5 cursor-pointer font-semibold text-black dark:text-white list-none">
+              <details key={idx} className="group bg-zinc-50 dark:bg-zinc-900 rounded-lg border border-zinc-100 dark:border-zinc-800 overflow-hidden">
+                <summary className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer font-semibold text-sm text-black dark:text-white list-none">
                   {faq.q}
-                  <span className="text-blue-600 text-2xl transition-transform group-open:rotate-45">+</span>
+                  <span className="text-blue-600 text-lg flex-shrink-0 transition-transform group-open:rotate-45">+</span>
                 </summary>
-                <div className="px-5 pb-5 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                <div className="px-4 pb-3 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
                   {faq.a}
                 </div>
               </details>

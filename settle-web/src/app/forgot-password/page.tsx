@@ -30,7 +30,7 @@ export default function ForgotPasswordPage() {
         getToken: () => null,
       });
 
-      const response = await apiCall('/auth/forgot-password', {
+      const response = await apiCall<{ success: boolean; message?: string; error?: string }>('/auth/forgot-password', {
         method: 'POST',
         body: JSON.stringify({ email }),
       });

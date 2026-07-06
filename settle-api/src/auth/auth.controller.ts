@@ -67,4 +67,20 @@ export class AuthController {
   async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
     return this.authService.updateProfile(req.user.sub, updateProfileDto);
   }
+
+  // ============================================================
+  // OTP via Email
+  // ============================================================
+
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 per minute
+  @Post('send-otp')
+  async sendEmailOtp(@Body() body: { email: string }) {
+    return this.authService.sendEmailOtp(body.email);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 per minute
+  @Post('verify-otp')
+  async verifyEmailOtp(@Body() body: { email: string; code: string }) {
+    return this.authService.verifyEmailOtp(body.email, body.code);
+  }
 }

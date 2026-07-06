@@ -11,6 +11,7 @@ import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { VerifyEmailDto } from './dtos/verify-email.dto';
 import { UpdateProfileDto } from './dtos/update-profile.dto';
 import { ActivitiesService } from '../activities/activities.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +20,7 @@ export class AuthService {
     private usersRepository: Repository<User>,
     private jwtService: JwtService,
     private activitiesService: ActivitiesService,
+    private emailService: EmailService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -57,6 +59,11 @@ export class AuthService {
     });
 
     return { accessToken, refreshToken, expiresIn: 30 * 24 * 60 * 60 }; // 30 days in seconds
+  }
+
+  // Public method for passkey login (called from WebAuthnController)
+  async generateTokensForUser(user: User) {
+    return this.generateTokens(user);
   }
 
   async login(loginDto: LoginDto) {
@@ -126,8 +133,9 @@ export class AuthService {
       { email: user.email, firstName: user.firstName, lastName: user.lastName }
     );
 
-    // TODO: Send verification email
-    // For now, return the token for testing
+    // Send verification email (logged to console in dev mode when no RESEND_API_KEY)
+    await this.emailService.sendVerificationEmail(user.email, verificationToken, user.firstName);
+
     const tokens = await this.generateTokens(user);
     
     return {
@@ -144,7 +152,6 @@ export class AuthService {
         phone: user.phone,
         createdAt: user.createdAt,
       },
-      verificationToken: verificationToken, // Remove this in production
     };
   }
 
@@ -178,12 +185,12 @@ export class AuthService {
       resetTokenExpires,
     });
 
-    // TODO: Send email with reset link
-    // For now, return the token for testing
-    return { 
-      success: true, 
+    // Send password reset email (logged to console in dev mode when no RESEND_API_KEY)
+    await this.emailService.sendPasswordResetEmail(user.email, resetToken, user.firstName);
+
+    return {
+      success: true,
       message: 'Password reset link sent',
-      resetToken // Remove this in production
     };
   }
 
@@ -266,11 +273,12 @@ export class AuthService {
       emailVerificationExpires: verificationExpires,
     });
 
-    // TODO: Send verification email
-    return { 
-      success: true, 
+    // Send verification email
+    await this.emailService.sendVerificationEmail(user.email, verificationToken, user.firstName);
+
+    return {
+      success: true,
       message: 'Verification email sent',
-      verificationToken // Remove this in production
     };
   }
 
@@ -308,5 +316,107 @@ export class AuthService {
     const updatedUser = await this.usersRepository.findOne({ where: { id: userId } });
     const { password: _, ...result } = updatedUser!;
     return result;
+  }
+
+  // ============================================================
+  // OTP via Email
+  // ============================================================
+
+  async sendEmailOtp(email: string): Promise<{ success: boolean; message: string; devCode?: string }> {
+    const user = await this.usersRepository.findOne({ where: { email } });
+    if (!user) {
+      // Don't reveal if email exists for security
+      return { success: true, message: 'If an account exists, a verification code was sent' };
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date();
+    expires.setMinutes(expires.getMinutes() + 10); // 10 minute expiry
+
+    await this.usersRepository.update(user.id, {
+      otpCode: code,
+      otpExpires: expires,
+      otpAttempts: 0,
+    });
+
+    const sent = await this.emailService.sendOtpEmail(email, code, user.firstName);
+
+    // In dev mode (no RESEND_API_KEY), return the code for testing
+    if (!process.env.RESEND_API_KEY) {
+      return { success: true, message: 'Verification code sent (dev mode)', devCode: code };
+    }
+
+    if (!sent) {
+      return { success: false, message: 'Failed to send verification code' };
+    }
+
+    return { success: true, message: 'Verification code sent to your email' };
+  }
+
+  async verifyEmailOtp(email: string, code: string) {
+    // Use a query builder to select the otpCode column (it's select: false in entity)
+    const user = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.otpCode')
+      .where('user.email = :email', { email })
+      .getOne();
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or code');
+    }
+
+    if (!user.otpCode || !user.otpExpires) {
+      throw new BadRequestException('No verification code was sent. Please request a new code.');
+    }
+
+    if (user.otpExpires < new Date()) {
+      throw new BadRequestException('Verification code has expired. Please request a new code.');
+    }
+
+    // Check attempt limit
+    if ((user.otpAttempts || 0) >= 5) {
+      throw new BadRequestException('Too many attempts. Please request a new code.');
+    }
+
+    if (user.otpCode !== code) {
+      await this.usersRepository.update(user.id, {
+        otpAttempts: (user.otpAttempts || 0) + 1,
+      });
+      throw new UnauthorizedException('Invalid verification code');
+    }
+
+    // Clear OTP and mark email verified
+    await this.usersRepository.update(user.id, {
+      otpCode: null,
+      otpExpires: null,
+      otpAttempts: 0,
+      emailVerified: true,
+    });
+
+    // Generate tokens
+    const tokens = await this.generateTokens(user);
+
+    await this.activitiesService.createActivity(
+      user.id,
+      'otp_login',
+      'User logged in via email OTP',
+      { email: user.email },
+    );
+
+    return {
+      success: true,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        createdAt: user.createdAt,
+      },
+    };
   }
 }

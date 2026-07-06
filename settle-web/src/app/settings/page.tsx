@@ -47,7 +47,7 @@ export default function SettingsPage() {
           },
         });
 
-        const response = await apiCall('/auth/profile', {
+        const response = await apiCall<UserProfile>('/auth/profile', {
           method: 'GET',
         });
 

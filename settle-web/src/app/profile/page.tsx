@@ -55,7 +55,7 @@ export default function ProfilePage() {
           },
         });
 
-        const response = await apiCall('/auth/profile', {
+        const response = await apiCall<UserProfile>('/auth/profile', {
           method: 'GET',
         });
 
@@ -95,7 +95,7 @@ export default function ProfilePage() {
         },
       });
 
-      const response = await apiCall('/auth/profile', {
+      const response = await apiCall<UserProfile>('/auth/profile', {
         method: 'PUT',
         body: JSON.stringify(editForm),
       });

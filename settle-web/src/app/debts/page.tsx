@@ -70,8 +70,8 @@ export default function DebtsPage() {
         });
 
         const [debtsData, summaryData] = await Promise.all([
-          apiCall('/debts', { method: 'GET' }),
-          apiCall('/debts/summary', { method: 'GET' }),
+          apiCall<Debt[]>('/debts', { method: 'GET' }),
+          apiCall<DebtSummary>('/debts/summary', { method: 'GET' }),
         ]);
 
         setDebts(debtsData);
@@ -101,7 +101,7 @@ export default function DebtsPage() {
         },
       });
 
-      await apiCall('/debts', {
+      await apiCall<void>('/debts', {
         method: 'POST',
         body: JSON.stringify({
           ...newDebt,
@@ -112,8 +112,8 @@ export default function DebtsPage() {
 
       // Refresh debts
       const [debtsData, summaryData] = await Promise.all([
-        apiCall('/debts', { method: 'GET' }),
-        apiCall('/debts/summary', { method: 'GET' }),
+        apiCall<Debt[]>('/debts', { method: 'GET' }),
+        apiCall<DebtSummary>('/debts/summary', { method: 'GET' }),
       ]);
 
       setDebts(debtsData);

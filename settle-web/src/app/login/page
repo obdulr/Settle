@@ -45,12 +45,12 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await apiCall<{ success: boolean; accessToken?: string; user?: any; error?: string }>('/auth/login', {
+      const response = await apiCall('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
 
-      if (response.success && response.accessToken) {
+      if (response.success) {
         storeAuth(response.accessToken, response.user);
         router.push('/dashboard');
       } else {
@@ -71,7 +71,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await apiCall<{ success: boolean; message?: string; error?: string; devCode?: string }>('/auth/send-otp', {
+      const response = await apiCall('/auth/send-otp', {
         method: 'POST',
         body: JSON.stringify({ email }),
       });
@@ -99,12 +99,12 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await apiCall<{ success: boolean; accessToken?: string; user?: any; error?: string }>('/auth/verify-otp', {
+      const response = await apiCall('/auth/verify-otp', {
         method: 'POST',
         body: JSON.stringify({ email, code: otpCode }),
       });
 
-      if (response.success && response.accessToken) {
+      if (response.success) {
         storeAuth(response.accessToken, response.user);
         router.push('/dashboard');
       } else {

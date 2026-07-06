@@ -10,15 +10,6 @@ export interface AuthUser {
   createdAt?: string;
 }
 
-export interface AuthResponse {
-  success: boolean;
-  user?: AuthUser;
-  accessToken?: string;
-  refreshToken?: string;
-  expiresIn?: number;
-  error?: string;
-}
-
 export interface CreateJsonApiClientOptions {
   getBaseUrl: () => string | Promise<string>;
   getToken?: () => string | null | Promise<string | null>;

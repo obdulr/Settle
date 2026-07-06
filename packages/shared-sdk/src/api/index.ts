@@ -4,8 +4,8 @@ import { createJsonApiClient } from '../auth';
 import type { User, AuthResponse, LoginCredentials, RegisterData } from '../types';
 
 export function createSettleApi(config: {
-  baseUrl: string;
-  getToken: () => string | null;
+  getBaseUrl: () => string | Promise<string>;
+  getToken: () => string | null | Promise<string | null>;
   onUnauthorized?: () => void;
 }) {
   const client = createJsonApiClient(config);
@@ -13,16 +13,22 @@ export function createSettleApi(config: {
   return {
     auth: {
       login: (credentials: LoginCredentials) =>
-        client.post<AuthResponse>('/auth/login', credentials),
+        client<AuthResponse>('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify(credentials),
+        }),
       register: (data: RegisterData) =>
-        client.post<AuthResponse>('/auth/register', data),
-      logout: () => client.post<void>('/auth/logout', {}),
-      profile: () => client.get<User>('/auth/profile'),
+        client<AuthResponse>('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+      logout: () => client<void>('/auth/logout', { method: 'POST', body: '{}' }),
+      profile: () => client<User>('/auth/profile', { method: 'GET' }),
     },
     users: {
-      getProfile: () => client.get<User>('/users/profile'),
+      getProfile: () => client<User>('/users/profile', { method: 'GET' }),
       updateProfile: (data: Partial<User>) =>
-        client.put<User>('/users/profile', data),
+        client<User>('/users/profile', { method: 'PUT', body: JSON.stringify(data) }),
     },
   };
 }

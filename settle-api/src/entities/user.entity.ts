@@ -37,15 +37,31 @@ export class User {
   @Column({ name: 'phone_verified', type: 'boolean', default: false, nullable: true })
   phoneVerified?: boolean;
 
-  // Passkey fields
-  @Column({ name: 'passkey_id', nullable: true })
-  passkeyId?: string;
+  // Passkey / WebAuthn fields
+  @Column({ name: 'passkey_credential_id', nullable: true })
+  passkeyCredentialId?: string;
 
-  @Column({ name: 'passkey_public_key', nullable: true })
-  passkeyPublicKey?: string;
+  @Column({ name: 'passkey_public_key', type: 'bytea', nullable: true })
+  passkeyPublicKey?: Buffer;
+
+  @Column({ name: 'passkey_counter', type: 'int', default: 0, nullable: true })
+  passkeyCounter?: number;
+
+  @Column({ name: 'passkey_transports', type: 'text', nullable: true })
+  passkeyTransports?: string; // JSON array stored as text
 
   @Column({ name: 'passkey_verified_at', type: 'timestamp', nullable: true })
   passkeyVerifiedAt?: Date;
+
+  // OTP via email fields
+  @Column({ name: 'otp_code', length: 10, nullable: true, select: false })
+  otpCode?: string;
+
+  @Column({ name: 'otp_expires', type: 'timestamp', nullable: true })
+  otpExpires?: Date;
+
+  @Column({ name: 'otp_attempts', type: 'int', default: 0, nullable: true })
+  otpAttempts?: number;
 
   // Security fields
   @Column({ name: 'failed_login_attempts', type: 'int', default: 0, nullable: true })
