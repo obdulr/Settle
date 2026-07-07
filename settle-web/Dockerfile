@@ -19,7 +19,8 @@ RUN pnpm run build
 
 ENV NODE_ENV=production
 ENV PORT=3025
+ENV HOSTNAME=0.0.0.0
 
 EXPOSE 3025
 
-CMD ["sh", "-c", "pnpm start -- -p 3025"]
+CMD ["sh", "-c", "node .next/standalone/server.js"]
