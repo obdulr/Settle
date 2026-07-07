@@ -4,27 +4,33 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.15.5 --activate
 
-# Copy workspace manifests first (better caching)
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY settle-web/package.json ./settle-web/
-COPY packages/shared/package.json ./packages/shared/
-COPY packages/shared-sdk/package.json ./packages/shared-sdk/
+# Copy the web package.json and the pre-built shared-sdk
+COPY package.json ./
+COPY shared-sdk ./shared-sdk
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile=false
+# Create a minimal pnpm-workspace.yaml so workspace:* resolves
+RUN printf 'packages:\n  - .\n  - shared-sdk\n' > pnpm-workspace.yaml
+
+# Install dependencies (shared-sdk is resolved as workspace dependency)
+RUN pnpm install --frozen-lockfile=false || true
+
+# If workspace install failed, manually link shared-sdk
+RUN mkdir -p node_modules/@settle/shared-sdk && \
+    cp -r shared-sdk/dist node_modules/@settle/shared-sdk/dist && \
+    cp shared-sdk/package.json node_modules/@settle/shared-sdk/package.json || true
 
 # Copy source code
 COPY . .
 
-# Build shared-sdk first (web depends on it)
-RUN cd packages/shared-sdk && pnpm run build || true
+# Remove stale .next folder
+RUN rm -rf .next
 
 # Build web
-RUN cd settle-web && pnpm run build
+RUN pnpm run build
 
 ENV NODE_ENV=production
 ENV PORT=3025
 
 EXPOSE 3025
 
-CMD ["sh", "-c", "cd settle-web && pnpm start"]
+CMD ["sh", "-c", "pnpm start"]
