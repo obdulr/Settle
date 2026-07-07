@@ -23,9 +23,14 @@ RUN rm -rf .next
 # Build
 RUN pnpm run build
 
+# Copy static files into standalone output (Next.js doesn't do this automatically)
+RUN cp -r .next/static .next/standalone/settle-web/.next/static || true
+RUN cp -r public .next/standalone/settle-web/public || true
+
 ENV NODE_ENV=production
 ENV PORT=3025
+ENV HOSTNAME=0.0.0.0
 
 EXPOSE 3025
 
-CMD ["sh", "-c", "node .next/standalone/server.js"]
+CMD ["sh", "-c", "node .next/standalone/settle-web/server.js"]
