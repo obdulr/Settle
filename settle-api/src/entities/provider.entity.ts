@@ -92,6 +92,10 @@ export class Provider {
   @Column({ type: 'boolean', default: true })
   isAcceptingLeads!: boolean;
 
+  // Stripe billing
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  stripeCustomerId?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

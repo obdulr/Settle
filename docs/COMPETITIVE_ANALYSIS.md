@@ -118,26 +118,28 @@ Consumers who don't qualify for settlement (under $7.5k debt) get:
 
 ## Build Priority
 
+> **Status Legend:** ✅ Done · 🔄 In Progress · ❌ Not Started
+
 ### Phase 1 — MVP (Weeks 1–8)
-1. Consumer assessment quiz → lead capture
-2. Provider marketplace landing page (sign up to receive leads)
-3. Basic provider portal (lead dashboard)
-4. Coaching subscription with core tools
-5. Transparent comparison page (even manually curated to start)
+1. ✅ Consumer assessment quiz → lead capture
+2. ✅ Provider marketplace landing page (sign up to receive leads)
+3. ✅ Basic provider portal (lead dashboard)
+4. ❌ Coaching subscription with core tools
+5. ✅ Transparent comparison page (even manually curated to start)
 
 ### Phase 2 — Marketplace (Weeks 9–16)
-1. Real-time provider bidding engine
-2. Lead quality scoring system
-3. Consumer-provider matching algorithm
-4. Full provider dashboard with analytics
-5. Consumer progress tracking portal
+1. ❌ Real-time provider bidding engine
+2. 🔄 Lead quality scoring system
+3. ❌ Consumer-provider matching algorithm
+4. 🔄 Full provider dashboard with analytics
+5. 🔄 Consumer progress tracking portal
 
 ### Phase 3 — Intelligence (Weeks 17–24)
-1. AI debt analysis and recommendation engine
-2. Credit score monitoring integration
-3. Automated credit recovery roadmap
-4. Community features and peer support
-5. Mobile app for consumers
+1. ❌ AI debt analysis and recommendation engine
+2. ❌ Credit score monitoring integration
+3. ❌ Automated credit recovery roadmap
+4. ❌ Community features and peer support
+5. 🔄 Mobile app for consumers
 
 ---
 

@@ -13,6 +13,7 @@ import { ActivitiesModule } from './activities/activities.module';
 import { DebtsModule } from './debts/debts.module';
 import { ProvidersModule } from './providers/providers.module';
 import { LeadsModule } from './leads/leads.module';
+import { StripeModule } from './stripe/stripe.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { LeadsModule } from './leads/leads.module';
     DebtsModule,
     ProvidersModule,
     LeadsModule,
+    StripeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

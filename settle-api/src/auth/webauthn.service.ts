@@ -20,11 +20,17 @@ export class WebAuthnService {
   ) {}
 
   private get rpID(): string {
-    return process.env.WEB_AUTHN_RP_ID || 'localhost';
+    if (process.env.WEB_AUTHN_RP_ID) return process.env.WEB_AUTHN_RP_ID;
+    return process.env.NODE_ENV === 'production'
+      ? 'settleinpeace.com'
+      : 'localhost';
   }
 
   private get origin(): string {
-    return process.env.WEB_AUTHN_ORIGIN || 'http://localhost:3025';
+    if (process.env.WEB_AUTHN_ORIGIN) return process.env.WEB_AUTHN_ORIGIN;
+    return process.env.NODE_ENV === 'production'
+      ? 'https://www.settleinpeace.com'
+      : 'http://localhost:3025';
   }
 
   async generateRegistrationOptions(userId: string, email: string) {

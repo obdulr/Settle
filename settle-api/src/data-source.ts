@@ -1,13 +1,17 @@
 import { DataSource } from 'typeorm';
 import { User } from './entities/user.entity';
+import { Activity } from './entities/activity.entity';
+import { Debt } from './entities/debt.entity';
+import { Provider } from './entities/provider.entity';
+import { Lead } from './entities/lead.entity';
 
 export const dataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('railway') 
+  ssl: process.env.DATABASE_URL?.includes('railway')
     ? { rejectUnauthorized: false }
     : false,
-  entities: [User],
+  entities: [User, Activity, Debt, Provider, Lead],
   synchronize: false,
   logging: process.env.NODE_ENV === 'development',
 });
