@@ -1,12 +1,8 @@
-[phases.setup]
-nixPkgs = ['nodejs_24', 'pnpm']
-
-[phases.build]
-cmds = [
-  'corepack enable && corepack prepare pnpm@9.15.5 --activate',
-  'pnpm install --frozen-lockfile=false',
-  'pnpm run build'
-]
-
-[start]
-cmd = 'pnpm start'
+node_modules
+.next
+dist
+.git
+.env
+.env.local
+*.log
+.turbo
