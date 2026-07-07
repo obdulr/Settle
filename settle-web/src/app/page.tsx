@@ -562,8 +562,15 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="border-t border-zinc-800 mt-8 pt-6 text-center text-xs text-zinc-600">
-            © {new Date().getFullYear()} Settle In Peace, Inc. All rights reserved. SettleInPeace.com is a trademark of Settle In Peace, Inc.
+          <div className="border-t border-zinc-800 mt-8 pt-6 text-center text-xs text-zinc-600 space-y-2">
+            <div className="flex justify-center gap-4">
+              <Link href="/terms" className="hover:text-zinc-400 transition-colors">Terms of Service</Link>
+              <span>·</span>
+              <Link href="/privacy" className="hover:text-zinc-400 transition-colors">Privacy Policy</Link>
+              <span>·</span>
+              <a href="mailto:help@settleinpeace.com" className="hover:text-zinc-400 transition-colors">Contact</a>
+            </div>
+            <div>© {new Date().getFullYear()} Settle In Peace, Inc. All rights reserved. SettleInPeace.com is a trademark of Settle In Peace, Inc.</div>
           </div>
         </div>
       </footer>

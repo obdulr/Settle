@@ -5,9 +5,18 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Enable CORS with credentials support for the frontend
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3025';
+  const allowedOrigins = [
+    'http://localhost:3025',
+    'https://www.settleinpeace.com',
+    'https://settleinpeace.com',
+    'https://settle-e700.onrender.com',
+  ];
+  const frontendUrl = process.env.FRONTEND_URL;
+  if (frontendUrl && !allowedOrigins.includes(frontendUrl)) {
+    allowedOrigins.push(frontendUrl);
+  }
   app.enableCors({
-    origin: frontendUrl,
+    origin: allowedOrigins,
     credentials: true,
   });
 
