@@ -179,6 +179,11 @@ export default function AssessmentPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-zinc-900 dark:to-black">
+      {/* Compliance disclaimer banner */}
+      <div className="bg-zinc-100 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700 text-center px-4 py-2 text-xs text-zinc-600 dark:text-zinc-400">
+        Settle In Peace is a marketplace, not a debt settlement provider. By submitting this assessment, you consent to be contacted by partner providers. <span className="text-zinc-500 dark:text-zinc-500">See our <a href="/terms" className="underline hover:text-zinc-700 dark:hover:text-zinc-300">Terms</a> &amp; <a href="/privacy" className="underline hover:text-zinc-700 dark:hover:text-zinc-300">Privacy Policy</a>.</span>
+      </div>
+
       {/* Top bar */}
       <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
