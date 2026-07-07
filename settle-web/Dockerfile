@@ -4,20 +4,15 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.15.5 --activate
 
-# Copy the web package.json and the pre-built shared-sdk
-COPY package.json ./
-COPY shared-sdk ./shared-sdk
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+COPY shared-sdk/package.json ./shared-sdk/
 
-# Create a minimal pnpm-workspace.yaml so workspace:* resolves
+# Create minimal workspace so workspace:* resolves
 RUN printf 'packages:\n  - .\n  - shared-sdk\n' > pnpm-workspace.yaml
 
-# Install dependencies (shared-sdk is resolved as workspace dependency)
-RUN pnpm install --frozen-lockfile=false || true
-
-# If workspace install failed, manually link shared-sdk
-RUN mkdir -p node_modules/@settle/shared-sdk && \
-    cp -r shared-sdk/dist node_modules/@settle/shared-sdk/dist && \
-    cp shared-sdk/package.json node_modules/@settle/shared-sdk/package.json || true
+# Install dependencies
+RUN pnpm install --frozen-lockfile=false
 
 # Copy source code
 COPY . .
@@ -25,7 +20,7 @@ COPY . .
 # Remove stale .next folder
 RUN rm -rf .next
 
-# Build web
+# Build
 RUN pnpm run build
 
 ENV NODE_ENV=production
@@ -33,4 +28,4 @@ ENV PORT=3025
 
 EXPOSE 3025
 
-CMD ["sh", "-c", "pnpm start"]
+CMD ["sh", "-c", "node .next/standalone/server.js"]
