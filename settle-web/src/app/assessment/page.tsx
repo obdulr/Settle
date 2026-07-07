@@ -4,22 +4,22 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const STEPS = [
-  'debt_amount',
-  'debt_types',
-  'months_behind',
-  'employment',
-  'income',
-  'contact',
-  'consent',
+  { id: 'debt_amount', label: 'Debt Amount', icon: '$' },
+  { id: 'debt_types', label: 'Debt Types', icon: 'CC' },
+  { id: 'months_behind', label: 'Payment Status', icon: '!' },
+  { id: 'employment', label: 'Employment', icon: 'W' },
+  { id: 'income', label: 'Income', icon: '$' },
+  { id: 'contact', label: 'Contact', icon: '@' },
+  { id: 'consent', label: 'Review & Submit', icon: '✓' },
 ];
 
 const DEBT_TYPE_OPTIONS = [
-  { value: 'credit_card', label: 'Credit Cards' },
-  { value: 'medical', label: 'Medical Bills' },
-  { value: 'personal_loan', label: 'Personal Loans' },
-  { value: 'student_loan', label: 'Student Loans' },
-  { value: 'business', label: 'Business Debt' },
-  { value: 'other', label: 'Other' },
+  { value: 'credit_card', label: 'Credit Cards', icon: '💳' },
+  { value: 'medical', label: 'Medical Bills', icon: '🏥' },
+  { value: 'personal_loan', label: 'Personal Loans', icon: '🏦' },
+  { value: 'student_loan', label: 'Student Loans', icon: '🎓' },
+  { value: 'business', label: 'Business Debt', icon: '💼' },
+  { value: 'other', label: 'Other', icon: '📋' },
 ];
 
 const US_STATES = [
@@ -29,9 +29,44 @@ const US_STATES = [
   'VA','WA','WV','WI','WY',
 ];
 
+const DEBT_AMOUNT_LABELS: Record<string, string> = {
+  '5000': 'Under $7,500',
+  '10000': '$7,500 – $15,000',
+  '20000': '$15,000 – $25,000',
+  '35000': '$25,000 – $50,000',
+  '75000': '$50,000 – $100,000',
+  '125000': 'Over $100,000',
+};
+
+const EMPLOYMENT_LABELS: Record<string, string> = {
+  employed: 'Employed Full-Time',
+  self_employed: 'Self-Employed / Freelance',
+  part_time: 'Part-Time / Gig Work',
+  unemployed: 'Unemployed',
+  retired: 'Retired',
+  other: 'Disability / Other',
+};
+
+const INCOME_LABELS: Record<string, string> = {
+  '1500': 'Under $2,000/month',
+  '2750': '$2,000 – $3,500/month',
+  '4250': '$3,500 – $5,000/month',
+  '6500': '$5,000 – $8,000/month',
+  '10000': 'Over $8,000/month',
+};
+
+const MONTHS_LABELS: Record<string, string> = {
+  '0': 'Current on all payments',
+  '1': '1–2 months behind',
+  '3': '3–5 months behind',
+  '6': '6+ months behind',
+  '12': 'In collections',
+};
+
 export default function AssessmentPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
@@ -55,6 +90,7 @@ export default function AssessmentPage() {
 
   const currentStep = STEPS[step];
   const progress = Math.round(((step) / STEPS.length) * 100);
+  const timeLeft = Math.max(15, 120 - (step * 17));
 
   const toggleDebtType = (type: string) => {
     setForm(f => ({
@@ -65,14 +101,24 @@ export default function AssessmentPage() {
     }));
   };
 
+  const goNext = () => {
+    setDirection(1);
+    setStep(s => s + 1);
+  };
+
+  const goBack = () => {
+    setDirection(-1);
+    setStep(s => s - 1);
+  };
+
   const canAdvance = () => {
-    if (currentStep === 'debt_amount') return Number(form.totalDebt) >= 1000;
-    if (currentStep === 'debt_types') return form.debtTypes.length > 0;
-    if (currentStep === 'months_behind') return form.monthsBehind !== '';
-    if (currentStep === 'employment') return form.employmentStatus !== '';
-    if (currentStep === 'income') return form.monthlyIncome !== '';
-    if (currentStep === 'contact') return form.firstName && form.lastName && form.email && form.phone && form.state;
-    if (currentStep === 'consent') return form.tcpaConsent;
+    if (currentStep.id === 'debt_amount') return Number(form.totalDebt) >= 1000;
+    if (currentStep.id === 'debt_types') return form.debtTypes.length > 0;
+    if (currentStep.id === 'months_behind') return form.monthsBehind !== '';
+    if (currentStep.id === 'employment') return form.employmentStatus !== '';
+    if (currentStep.id === 'income') return form.monthlyIncome !== '';
+    if (currentStep.id === 'contact') return form.firstName && form.lastName && form.email && form.phone && form.state;
+    if (currentStep.id === 'consent') return form.tcpaConsent;
     return true;
   };
 
@@ -108,9 +154,9 @@ export default function AssessmentPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-black dark:text-white mb-4">You're on your way to peace.</h1>
+          <h1 className="text-3xl font-bold text-black dark:text-white mb-4">You&apos;re on your way to peace.</h1>
           <p className="text-zinc-600 dark:text-zinc-400 mb-8 text-lg">
-            We've matched your profile with qualified debt relief providers. Check your options now.
+            We&apos;ve matched your profile with qualified debt relief providers. Check your options now.
           </p>
           <div className="space-y-3">
             <button
@@ -132,56 +178,102 @@ export default function AssessmentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-zinc-900 dark:to-black px-4 py-12">
-      <div className="max-w-xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-zinc-900 dark:to-black">
+      {/* Top bar */}
+      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-bold text-black dark:text-white">
+              Settle<span className="text-blue-600">InPeace</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-zinc-500 dark:text-zinc-400">
+            <span className="flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              256-bit SSL Secure
+            </span>
+            <span>⏱ ~{timeLeft}s remaining</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-8">
           <p className="text-sm text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide mb-2">Free Debt Assessment</p>
           <h1 className="text-3xl font-bold text-black dark:text-white">Find your path to financial peace</h1>
           <p className="text-zinc-500 dark:text-zinc-400 mt-2">2 minutes · No credit check · No obligation</p>
         </div>
 
-        {/* Progress bar */}
+        {/* Step indicator dots */}
         <div className="mb-8">
-          <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-            <span>Step {step + 1} of {STEPS.length}</span>
-            <span>{progress}% complete</span>
+          <div className="flex items-center justify-between mb-2">
+            {STEPS.map((s, i) => (
+              <div key={s.id} className="flex items-center">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                    i < step
+                      ? 'bg-green-500 text-white'
+                      : i === step
+                      ? 'bg-blue-600 text-white ring-4 ring-blue-100 dark:ring-blue-950'
+                      : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-400'
+                  }`}
+                >
+                  {i < step ? '✓' : i + 1}
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div className={`w-6 h-0.5 mx-1 ${i < step ? 'bg-green-500' : 'bg-zinc-200 dark:bg-zinc-700'}`} />
+                )}
+              </div>
+            ))}
           </div>
-          <div className="h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full">
-            <div
-              className="h-2 bg-blue-600 rounded-full transition-all duration-500"
-              style={{ width: `${progress}%` }}
-            />
+          <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
+            <span className="font-medium text-blue-600 dark:text-blue-400">{currentStep.label}</span>
+            <span>{progress}% complete</span>
           </div>
         </div>
 
-        {/* Step content */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg p-8">
+        {/* Main card */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-100 dark:border-zinc-800 p-8">
 
           {/* Step 1: Debt Amount */}
-          {currentStep === 'debt_amount' && (
+          {currentStep.id === 'debt_amount' && (
             <div>
               <h2 className="text-2xl font-bold text-black dark:text-white mb-2">How much do you owe in total?</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 mb-6">Include all unsecured debts combined.</p>
+              <p className="text-zinc-500 dark:text-zinc-400 mb-6">Include all unsecured debts combined — credit cards, medical bills, personal loans, etc.</p>
               <div className="space-y-3">
                 {[
-                  { label: 'Under $7,500', value: '5000' },
-                  { label: '$7,500 – $15,000', value: '10000' },
-                  { label: '$15,000 – $25,000', value: '20000' },
-                  { label: '$25,000 – $50,000', value: '35000' },
-                  { label: '$50,000 – $100,000', value: '75000' },
-                  { label: 'Over $100,000', value: '125000' },
+                  { label: 'Under $7,500', value: '5000', note: 'May qualify for coaching tools' },
+                  { label: '$7,500 – $15,000', value: '10000', note: 'Qualifies for most programs' },
+                  { label: '$15,000 – $25,000', value: '20000', note: 'Best savings potential' },
+                  { label: '$25,000 – $50,000', value: '35000', note: 'Best savings potential' },
+                  { label: '$50,000 – $100,000', value: '75000', note: 'Highest savings potential' },
+                  { label: 'Over $100,000', value: '125000', note: 'Highest savings potential' },
                 ].map(opt => (
                   <button
                     key={opt.value}
                     onClick={() => setForm(f => ({ ...f, totalDebt: opt.value }))}
-                    className={`w-full py-3 px-5 rounded-lg border-2 text-left font-medium transition-all ${
+                    className={`w-full py-4 px-5 rounded-xl border-2 text-left transition-all flex items-center justify-between ${
                       form.totalDebt === opt.value
-                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                        : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-blue-400'
+                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-950'
+                        : 'border-zinc-200 dark:border-zinc-700 hover:border-blue-400'
                     }`}
                   >
-                    {opt.label}
+                    <div>
+                      <div className={`font-bold text-lg ${form.totalDebt === opt.value ? 'text-blue-700 dark:text-blue-300' : 'text-black dark:text-white'}`}>
+                        {opt.label}
+                      </div>
+                      <div className="text-xs text-zinc-400 mt-0.5">{opt.note}</div>
+                    </div>
+                    <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 ${form.totalDebt === opt.value ? 'border-blue-600 bg-blue-600' : 'border-zinc-300'}`}>
+                      {form.totalDebt === opt.value && (
+                        <svg className="w-3 h-3 text-white mx-auto mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -189,22 +281,25 @@ export default function AssessmentPage() {
           )}
 
           {/* Step 2: Debt Types */}
-          {currentStep === 'debt_types' && (
+          {currentStep.id === 'debt_types' && (
             <div>
               <h2 className="text-2xl font-bold text-black dark:text-white mb-2">What types of debt do you have?</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 mb-6">Select all that apply.</p>
+              <p className="text-zinc-500 dark:text-zinc-400 mb-6">Select all that apply. This helps us match you with the right providers.</p>
               <div className="grid grid-cols-2 gap-3">
                 {DEBT_TYPE_OPTIONS.map(opt => (
                   <button
                     key={opt.value}
                     onClick={() => toggleDebtType(opt.value)}
-                    className={`py-3 px-4 rounded-lg border-2 text-center font-medium transition-all ${
+                    className={`py-4 px-4 rounded-xl border-2 text-center transition-all ${
                       form.debtTypes.includes(opt.value)
-                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                        : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-blue-400'
+                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-950'
+                        : 'border-zinc-200 dark:border-zinc-700 hover:border-blue-400'
                     }`}
                   >
-                    {opt.label}
+                    <div className="text-2xl mb-1">{opt.icon}</div>
+                    <div className={`text-sm font-semibold ${form.debtTypes.includes(opt.value) ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                      {opt.label}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -212,28 +307,33 @@ export default function AssessmentPage() {
           )}
 
           {/* Step 3: Months Behind */}
-          {currentStep === 'months_behind' && (
+          {currentStep.id === 'months_behind' && (
             <div>
               <h2 className="text-2xl font-bold text-black dark:text-white mb-2">How far behind are you on payments?</h2>
               <p className="text-zinc-500 dark:text-zinc-400 mb-6">On your most delinquent account.</p>
               <div className="space-y-3">
                 {[
-                  { label: "I'm current on all payments", value: '0' },
-                  { label: '1–2 months behind', value: '1' },
-                  { label: '3–5 months behind', value: '3' },
-                  { label: '6+ months behind', value: '6' },
-                  { label: 'In collections', value: '12' },
+                  { label: "I'm current on all payments", value: '0', color: 'green' },
+                  { label: '1–2 months behind', value: '1', color: 'yellow' },
+                  { label: '3–5 months behind', value: '3', color: 'orange' },
+                  { label: '6+ months behind', value: '6', color: 'red' },
+                  { label: 'In collections', value: '12', color: 'red' },
                 ].map(opt => (
                   <button
                     key={opt.value}
                     onClick={() => setForm(f => ({ ...f, monthsBehind: opt.value }))}
-                    className={`w-full py-3 px-5 rounded-lg border-2 text-left font-medium transition-all ${
+                    className={`w-full py-4 px-5 rounded-xl border-2 text-left font-medium transition-all flex items-center justify-between ${
                       form.monthsBehind === opt.value
                         ? 'border-blue-600 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
                         : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-blue-400'
                     }`}
                   >
                     {opt.label}
+                    {form.monthsBehind === opt.value && (
+                      <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
                   </button>
                 ))}
               </div>
@@ -241,28 +341,29 @@ export default function AssessmentPage() {
           )}
 
           {/* Step 4: Employment */}
-          {currentStep === 'employment' && (
+          {currentStep.id === 'employment' && (
             <div>
-              <h2 className="text-2xl font-bold text-black dark:text-white mb-2">What is your current employment status?</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 mb-6">This helps match you with the right programs.</p>
+              <h2 className="text-2xl font-bold text-black dark:text-white mb-2">What is your employment status?</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 mb-6">This helps match you with programs you qualify for.</p>
               <div className="space-y-3">
                 {[
-                  { label: 'Employed full-time', value: 'employed' },
-                  { label: 'Self-employed / Freelance', value: 'self_employed' },
-                  { label: 'Part-time / Gig work', value: 'part_time' },
-                  { label: 'Unemployed', value: 'unemployed' },
-                  { label: 'Retired', value: 'retired' },
-                  { label: 'Disability / Other', value: 'other' },
+                  { label: 'Employed full-time', value: 'employed', icon: '💼' },
+                  { label: 'Self-employed / Freelance', value: 'self_employed', icon: '🧑‍💻' },
+                  { label: 'Part-time / Gig work', value: 'part_time', icon: '🚗' },
+                  { label: 'Unemployed', value: 'unemployed', icon: '🔍' },
+                  { label: 'Retired', value: 'retired', icon: '🏖️' },
+                  { label: 'Disability / Other', value: 'other', icon: '🩺' },
                 ].map(opt => (
                   <button
                     key={opt.value}
                     onClick={() => setForm(f => ({ ...f, employmentStatus: opt.value }))}
-                    className={`w-full py-3 px-5 rounded-lg border-2 text-left font-medium transition-all ${
+                    className={`w-full py-4 px-5 rounded-xl border-2 text-left font-medium transition-all flex items-center gap-3 ${
                       form.employmentStatus === opt.value
                         ? 'border-blue-600 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
                         : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-blue-400'
                     }`}
                   >
+                    <span className="text-xl">{opt.icon}</span>
                     {opt.label}
                   </button>
                 ))}
@@ -271,10 +372,10 @@ export default function AssessmentPage() {
           )}
 
           {/* Step 5: Income */}
-          {currentStep === 'income' && (
+          {currentStep.id === 'income' && (
             <div>
               <h2 className="text-2xl font-bold text-black dark:text-white mb-2">What is your approximate monthly income?</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 mb-6">Before taxes, from all sources.</p>
+              <p className="text-zinc-500 dark:text-zinc-400 mb-6">Before taxes, from all sources. This stays private.</p>
               <div className="space-y-3">
                 {[
                   { label: 'Under $2,000/month', value: '1500' },
@@ -286,7 +387,7 @@ export default function AssessmentPage() {
                   <button
                     key={opt.value}
                     onClick={() => setForm(f => ({ ...f, monthlyIncome: opt.value }))}
-                    className={`w-full py-3 px-5 rounded-lg border-2 text-left font-medium transition-all ${
+                    className={`w-full py-4 px-5 rounded-xl border-2 text-left font-medium transition-all ${
                       form.monthlyIncome === opt.value
                         ? 'border-blue-600 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
                         : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-blue-400'
@@ -300,69 +401,74 @@ export default function AssessmentPage() {
           )}
 
           {/* Step 6: Contact Info */}
-          {currentStep === 'contact' && (
+          {currentStep.id === 'contact' && (
             <div>
               <h2 className="text-2xl font-bold text-black dark:text-white mb-2">Where should we send your matches?</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 mb-6">Your information is private and never sold.</p>
+              <p className="text-zinc-500 dark:text-zinc-400 mb-6">Your information is private, secure, and never sold to third parties.</p>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">First Name</label>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">First Name</label>
                     <input
                       type="text"
                       value={form.firstName}
                       onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))}
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-xl dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                      placeholder="John"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Last Name</label>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Last Name</label>
                     <input
                       type="text"
                       value={form.lastName}
                       onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-xl dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                      placeholder="Doe"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Email Address</label>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Email Address</label>
                   <input
                     type="email"
                     value={form.email}
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-xl dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                    placeholder="john@example.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Phone Number</label>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Phone Number</label>
                   <input
                     type="tel"
                     value={form.phone}
                     onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-xl dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                    placeholder="(555) 123-4567"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">State</label>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">State</label>
                     <select
                       value={form.state}
                       onChange={e => setForm(f => ({ ...f, state: e.target.value }))}
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-xl dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                     >
                       <option value="">Select state</option>
                       {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">ZIP Code</label>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">ZIP Code</label>
                     <input
                       type="text"
                       value={form.zipCode}
                       onChange={e => setForm(f => ({ ...f, zipCode: e.target.value }))}
                       maxLength={5}
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-xl dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                      placeholder="12345"
                     />
                   </div>
                 </div>
@@ -370,27 +476,63 @@ export default function AssessmentPage() {
             </div>
           )}
 
-          {/* Step 7: Consent */}
-          {currentStep === 'consent' && (
+          {/* Step 7: Consent & Review */}
+          {currentStep.id === 'consent' && (
             <div>
-              <h2 className="text-2xl font-bold text-black dark:text-white mb-2">Almost done — one last step</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 mb-6">Please review and agree to connect with providers.</p>
-              <div className="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4 mb-6 text-sm text-zinc-600 dark:text-zinc-400 space-y-2">
-                <p><strong>Your information summary:</strong></p>
-                <p>Total Debt: <strong>${Number(form.totalDebt).toLocaleString()}</strong></p>
-                <p>Debt Types: <strong>{form.debtTypes.join(', ') || '—'}</strong></p>
-                <p>Employment: <strong>{form.employmentStatus}</strong></p>
-                <p>State: <strong>{form.state}</strong></p>
+              <h2 className="text-2xl font-bold text-black dark:text-white mb-2">Review your information</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 mb-6">Please confirm everything looks correct and provide your consent.</p>
+
+              {/* Summary card */}
+              <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-5 mb-6 space-y-3">
+                <div className="flex justify-between items-center pb-2 border-b border-zinc-200 dark:border-zinc-700">
+                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Assessment Summary</span>
+                  <button onClick={() => setStep(0)} className="text-xs text-blue-600 hover:underline">Edit</button>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <div className="text-zinc-400 text-xs">Total Debt</div>
+                    <div className="font-semibold text-black dark:text-white">{DEBT_AMOUNT_LABELS[form.totalDebt] || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-400 text-xs">Debt Types</div>
+                    <div className="font-semibold text-black dark:text-white">
+                      {form.debtTypes.map(t => DEBT_TYPE_OPTIONS.find(o => o.value === t)?.label).filter(Boolean).join(', ') || '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-400 text-xs">Payment Status</div>
+                    <div className="font-semibold text-black dark:text-white">{MONTHS_LABELS[form.monthsBehind] || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-400 text-xs">Employment</div>
+                    <div className="font-semibold text-black dark:text-white">{EMPLOYMENT_LABELS[form.employmentStatus] || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-400 text-xs">Monthly Income</div>
+                    <div className="font-semibold text-black dark:text-white">{INCOME_LABELS[form.monthlyIncome] || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-400 text-xs">Location</div>
+                    <div className="font-semibold text-black dark:text-white">{form.state}{form.zipCode ? ` ${form.zipCode}` : ''}</div>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-zinc-200 dark:border-zinc-700">
+                  <div className="text-zinc-400 text-xs">Contact</div>
+                  <div className="font-semibold text-black dark:text-white text-sm">{form.firstName} {form.lastName}</div>
+                  <div className="text-zinc-500 text-xs">{form.email} · {form.phone}</div>
+                </div>
               </div>
-              <label className="flex gap-3 cursor-pointer">
+
+              {/* Consent checkbox */}
+              <label className="flex gap-3 cursor-pointer items-start">
                 <input
                   type="checkbox"
                   checked={form.tcpaConsent}
                   onChange={e => setForm(f => ({ ...f, tcpaConsent: e.target.checked }))}
-                  className="mt-1 w-4 h-4 accent-blue-600"
+                  className="mt-1 w-5 h-5 accent-blue-600 flex-shrink-0"
                 />
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  I agree to be contacted by Settle In Peace and its partner debt relief providers by phone, email, or text message regarding my debt situation. I understand this constitutes a TCPA-compliant opt-in. Standard message and data rates may apply.
+                <span className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  I agree to be contacted by Settle In Peace and its partner debt relief providers by phone, email, or text message regarding my debt situation. I understand this constitutes a TCPA-compliant opt-in and that standard message and data rates may apply. I may opt out at any time.
                 </span>
               </label>
               {error && (
@@ -403,17 +545,17 @@ export default function AssessmentPage() {
           <div className="mt-8 flex gap-3">
             {step > 0 && (
               <button
-                onClick={() => setStep(s => s - 1)}
-                className="flex-1 py-3 px-6 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                onClick={goBack}
+                className="px-6 py-3 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
               >
-                Back
+                ← Back
               </button>
             )}
             {step < STEPS.length - 1 ? (
               <button
-                onClick={() => setStep(s => s + 1)}
+                onClick={goNext}
                 disabled={!canAdvance()}
-                className="flex-1 py-3 px-6 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 py-3 px-6 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 Continue →
               </button>
@@ -421,7 +563,7 @@ export default function AssessmentPage() {
               <button
                 onClick={handleSubmit}
                 disabled={!canAdvance() || submitting}
-                className="flex-1 py-3 px-6 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 py-3 px-6 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 {submitting ? 'Submitting...' : 'See My Options →'}
               </button>
@@ -430,11 +572,17 @@ export default function AssessmentPage() {
         </div>
 
         {/* Trust bar */}
-        <div className="mt-6 flex justify-center gap-6 text-xs text-zinc-400 dark:text-zinc-600">
-          <span>🔒 Secure & Private</span>
+        <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-zinc-400 dark:text-zinc-600">
+          <span className="flex items-center gap-1">
+            <svg className="w-3.5 h-3.5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+            256-bit SSL Encrypted
+          </span>
           <span>✓ No Credit Check</span>
           <span>✓ No Obligation</span>
           <span>✓ 100% Free</span>
+          <span>✓ Confidential</span>
         </div>
       </div>
     </div>
