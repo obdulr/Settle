@@ -9,4 +9,4 @@ cmds = [
 ]
 
 [start]
-cmd = 'cd settle-api && pnpm start'
+cmd = 'cd settle-api && node dist/main.js'

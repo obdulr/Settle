@@ -21,7 +21,7 @@ builder = "NIXPACKS"
 buildCommand = "corepack enable && corepack prepare pnpm@9.15.5 --activate && pnpm install --frozen-lockfile=false && cd settle-api && pnpm run build"
 
 [deploy]
-startCommand = "cd settle-api && pnpm start"
+startCommand = "cd settle-api && node dist/main.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

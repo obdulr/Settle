@@ -29,7 +29,7 @@ import { LeadsModule } from './leads/leads.module';
           : { rejectUnauthorized: false },
       },
       entities: [User, Activity, Debt, Provider, Lead],
-      synchronize: process.env.NODE_ENV === 'development',
+      synchronize: process.env.NODE_ENV !== 'production' || process.env.DB_SYNC === 'true',
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
     }),
