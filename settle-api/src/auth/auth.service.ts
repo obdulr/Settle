@@ -28,10 +28,7 @@ export class AuthService {
 
   async validateUser(email: string, password: string): Promise<any> {
     // Check regular users first
-    const user = await this.usersRepository.findOne({
-      where: { email },
-      select: ['id', 'email', 'password', 'firstName', 'lastName', 'phone', 'role', 'createdAt'],
-    });
+    const user = await this.usersRepository.findOne({ where: { email } });
     if (user && user.password) {
       try {
         const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -45,10 +42,7 @@ export class AuthService {
     }
 
     // Check providers (the email might belong to a provider, not a user)
-    const provider = await this.providersRepository.findOne({
-      where: { email },
-      select: ['id', 'email', 'password', 'companyName', 'phone', 'status', 'creditBalance', 'isAcceptingLeads', 'subscriptionType', 'createdAt'],
-    });
+    const provider = await this.providersRepository.findOne({ where: { email } });
     if (provider && provider.password) {
       try {
         const isPasswordValid = await bcrypt.compare(password, provider.password);
