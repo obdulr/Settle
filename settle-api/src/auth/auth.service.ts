@@ -33,10 +33,14 @@ export class AuthService {
       select: ['id', 'email', 'password', 'firstName', 'lastName', 'phone', 'role', 'createdAt'],
     });
     if (user && user.password) {
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) return null;
-      const { password: _, ...result } = user;
-      return result;
+      try {
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) return null;
+        const { password: _, ...result } = user;
+        return result;
+      } catch {
+        // Password might be null/invalid, fall through to provider check
+      }
     }
 
     // Check providers
@@ -45,17 +49,20 @@ export class AuthService {
       select: ['id', 'email', 'password', 'companyName', 'phone', 'status', 'creditBalance', 'isAcceptingLeads', 'subscriptionType', 'createdAt'],
     });
     if (provider && provider.password) {
-      const isPasswordValid = await bcrypt.compare(password, provider.password);
-      if (!isPasswordValid) return null;
-      const { password: _, ...result } = provider;
-      // Normalize provider to look like a user for token generation
-      return {
-        ...result,
-        role: 'provider',
-        firstName: provider.companyName,
-        lastName: '',
-        phone: provider.phone || '',
-      };
+      try {
+        const isPasswordValid = await bcrypt.compare(password, provider.password);
+        if (!isPasswordValid) return null;
+        const { password: _, ...result } = provider;
+        return {
+          ...result,
+          role: 'provider',
+          firstName: provider.companyName,
+          lastName: '',
+          phone: provider.phone || '',
+        };
+      } catch {
+        return null;
+      }
     }
 
     return null;
