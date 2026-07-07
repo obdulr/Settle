@@ -43,6 +43,7 @@ export class AuthService {
 
     // Check providers (the email might belong to a provider, not a user)
     const provider = await this.providersRepository.findOne({ where: { email } });
+    console.log('[AUTH] Provider lookup for', email, ':', provider ? `found, password length=${provider.password?.length}` : 'not found');
     if (provider && provider.password) {
       try {
         const isPasswordValid = await bcrypt.compare(password, provider.password);
