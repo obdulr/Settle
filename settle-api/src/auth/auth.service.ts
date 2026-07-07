@@ -47,6 +47,7 @@ export class AuthService {
     if (provider && provider.password) {
       try {
         const isPasswordValid = await bcrypt.compare(password, provider.password);
+        console.log('[AUTH] Provider password compare result:', isPasswordValid, 'for email:', email);
         if (isPasswordValid) {
           const { password: _, ...result } = provider;
           return {
