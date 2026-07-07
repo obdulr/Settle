@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
+import { Provider } from '../entities/provider.entity';
 import { LoginDto } from './dtos/login.dto';
 import { RegisterDto } from './dtos/register.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
@@ -18,24 +19,40 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Provider)
+    private providersRepository: Repository<Provider>,
     private jwtService: JwtService,
     private activitiesService: ActivitiesService,
     private emailService: EmailService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
+    // Check regular users first
     const user = await this.usersRepository.findOne({ where: { email } });
-    if (!user) {
-      return null;
+    if (user) {
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) return null;
+      const { password: _, ...result } = user;
+      return result;
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return null;
+    // Check providers
+    const provider = await this.providersRepository.findOne({ where: { email } });
+    if (provider) {
+      const isPasswordValid = await bcrypt.compare(password, provider.password);
+      if (!isPasswordValid) return null;
+      const { password: _, ...result } = provider;
+      // Normalize provider to look like a user for token generation
+      return {
+        ...result,
+        role: 'provider',
+        firstName: provider.companyName,
+        lastName: '',
+        phone: provider.phone || '',
+      };
     }
 
-    const { password: _, ...result } = user;
-    return result;
+    return null;
   }
 
   private async generateTokens(user: User) {

@@ -52,7 +52,7 @@ export default function LoginPage() {
 
       if (response.success && response.accessToken) {
         storeAuth(response.accessToken, response.user);
-        router.push('/dashboard');
+        router.push(response.user?.role === 'provider' ? '/portal' : '/dashboard');
       } else {
         setError(response.error || 'Login failed');
       }
@@ -106,7 +106,7 @@ export default function LoginPage() {
 
       if (response.success && response.accessToken) {
         storeAuth(response.accessToken, response.user);
-        router.push('/dashboard');
+        router.push(response.user?.role === 'provider' ? '/portal' : '/dashboard');
       } else {
         setError(response.error || 'Invalid code');
       }
@@ -149,7 +149,7 @@ export default function LoginPage() {
 
       if (result.success) {
         storeAuth(result.accessToken, result.user);
-        router.push('/dashboard');
+        router.push(result.user?.role === 'provider' ? '/portal' : '/dashboard');
       } else {
         setError(result.error || 'Passkey authentication failed');
       }

@@ -12,6 +12,7 @@ import { TelnyxService } from './telnyx.service';
 import { SmsAuthService } from './sms-auth.service';
 import { SmsAuthController } from './sms-auth.controller';
 import { User } from '../entities/user.entity';
+import { Provider } from '../entities/provider.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { ThrottlerGuard } from './guards/throttle.guard';
@@ -20,7 +21,7 @@ import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Provider]),
     PassportModule,
     ActivitiesModule,
     EmailModule,
