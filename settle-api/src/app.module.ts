@@ -20,9 +20,7 @@ import { LeadsModule } from './leads/leads.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL?.includes('localhost')
-        ? false
-        : { rejectUnauthorized: false },
+      ssl: false,
       entities: [User, Activity, Debt, Provider, Lead],
       synchronize: process.env.NODE_ENV !== 'production' || process.env.DB_SYNC === 'true',
       logging: process.env.NODE_ENV === 'development',
