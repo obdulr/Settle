@@ -7,10 +7,10 @@ import Link from 'next/link';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025';
 
 const CREDIT_PACKAGES = [
-  { credits: 500, price: 500, bonus: 0, label: 'Starter', popular: false },
-  { credits: 1000, price: 950, bonus: 50, label: 'Professional', popular: true },
-  { credits: 2500, price: 2250, bonus: 250, label: 'Business', popular: false },
-  { credits: 5000, price: 4250, bonus: 750, label: 'Enterprise', popular: false },
+  { credits: 500, price: 50, bonus: 0, label: 'Starter', popular: false },
+  { credits: 1000, price: 90, bonus: 0, label: 'Professional', popular: true },
+  { credits: 2500, price: 200, bonus: 0, label: 'Business', popular: false },
+  { credits: 5000, price: 350, bonus: 0, label: 'Enterprise', popular: false },
 ];
 
 export default function BillingPage() {
@@ -37,9 +37,29 @@ export default function BillingPage() {
   const handlePurchase = async () => {
     if (selected === null) return;
     setProcessing(true);
-    // TODO: Integrate Stripe checkout here
-    alert('Stripe integration coming soon. For now, contact partners@settleinpeace.com to add credits manually.');
-    setProcessing(false);
+    try {
+      const token = localStorage.getItem('token');
+      const pkg = CREDIT_PACKAGES[selected];
+      const res = await fetch(`${API_URL}/stripe/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ credits: pkg.credits }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        // Redirect to Stripe-hosted checkout
+        window.location.href = data.url;
+      } else {
+        alert(data.message || 'Failed to start checkout. Please try again.');
+        setProcessing(false);
+      }
+    } catch (err) {
+      alert('Something went wrong. Please try again.');
+      setProcessing(false);
+    }
   };
 
   return (
@@ -114,7 +134,7 @@ export default function BillingPage() {
             >
               {processing ? 'Processing...' : 'Purchase Credits →'}
             </button>
-            <p className="text-xs text-zinc-400 mt-3 text-center">Secure payment powered by Stripe (coming soon)</p>
+            <p className="text-xs text-zinc-400 mt-3 text-center">Secure payment powered by Stripe</p>
           </div>
         )}
 
