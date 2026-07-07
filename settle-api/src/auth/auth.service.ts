@@ -55,11 +55,11 @@ export class AuthService {
     return null;
   }
 
-  private async generateTokens(user: User) {
+  private async generateTokens(user: any) {
     const payload = {
       sub: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role || 'customer',
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
@@ -79,7 +79,7 @@ export class AuthService {
   }
 
   // Public method for passkey login (called from WebAuthnController)
-  async generateTokensForUser(user: User) {
+  async generateTokensForUser(user: any) {
     return this.generateTokens(user);
   }
 
@@ -91,13 +91,19 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user);
     
-    // Log login activity
-    await this.activitiesService.createActivity(
-      user.id,
-      'login',
-      'User logged in',
-      { email: user.email }
-    );
+    // Log login activity (skip for providers — they don't have an activities table row)
+    if (user.role !== 'provider') {
+      try {
+        await this.activitiesService.createActivity(
+          user.id,
+          'login',
+          'User logged in',
+          { email: user.email }
+        );
+      } catch {
+        // Activity logging is non-critical
+      }
+    }
     
     return {
       success: true,
@@ -107,7 +113,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role,
+        role: user.role || 'customer',
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone,
@@ -163,7 +169,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role,
+        role: user.role || 'customer',
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone,
@@ -428,7 +434,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role,
+        role: user.role || 'customer',
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone,
