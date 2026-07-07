@@ -28,13 +28,11 @@ export class AuthService {
 
   async validateUser(email: string, password: string): Promise<any> {
     // Check regular users first
-    const user = await this.usersRepository
-      .createQueryBuilder('u')
-      .addSelect('u.password')
-      .where('u.email = :email', { email })
-      .getOne();
-    if (user) {
-      if (!user.password) return null;
+    const user = await this.usersRepository.findOne({
+      where: { email },
+      select: ['id', 'email', 'password', 'firstName', 'lastName', 'phone', 'role', 'createdAt'],
+    });
+    if (user && user.password) {
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) return null;
       const { password: _, ...result } = user;
@@ -42,13 +40,11 @@ export class AuthService {
     }
 
     // Check providers
-    const provider = await this.providersRepository
-      .createQueryBuilder('p')
-      .addSelect('p.password')
-      .where('p.email = :email', { email })
-      .getOne();
-    if (provider) {
-      if (!provider.password) return null;
+    const provider = await this.providersRepository.findOne({
+      where: { email },
+      select: ['id', 'email', 'password', 'companyName', 'phone', 'status', 'creditBalance', 'isAcceptingLeads', 'subscriptionType', 'createdAt'],
+    });
+    if (provider && provider.password) {
       const isPasswordValid = await bcrypt.compare(password, provider.password);
       if (!isPasswordValid) return null;
       const { password: _, ...result } = provider;
