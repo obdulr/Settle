@@ -5,7 +5,6 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { Provider } from '../entities/provider.entity';
-import { LoginDto } from './dtos/login.dto';
 import { RegisterDto } from './dtos/register.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
@@ -43,11 +42,9 @@ export class AuthService {
 
     // Check providers (the email might belong to a provider, not a user)
     const provider = await this.providersRepository.findOne({ where: { email } });
-    console.log('[AUTH] Provider lookup for', email, ':', provider ? `found, password length=${provider.password?.length}` : 'not found');
     if (provider && provider.password) {
       try {
         const isPasswordValid = await bcrypt.compare(password, provider.password);
-        console.log('[AUTH] Provider password compare result:', isPasswordValid, 'for email:', email);
         if (isPasswordValid) {
           const { password: _, ...result } = provider;
           return {
@@ -94,14 +91,9 @@ export class AuthService {
     return this.generateTokens(user);
   }
 
-  async login(loginDto: LoginDto) {
-    const user = await this.validateUser(loginDto.email, loginDto.password);
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
+  async login(user: any) {
     const tokens = await this.generateTokens(user);
-    
+
     // Log login activity (skip for providers — they don't have an activities table row)
     if (user.role !== 'provider') {
       try {
@@ -115,7 +107,7 @@ export class AuthService {
         // Activity logging is non-critical
       }
     }
-    
+
     return {
       success: true,
       accessToken: tokens.accessToken,

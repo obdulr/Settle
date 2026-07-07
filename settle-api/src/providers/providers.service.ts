@@ -15,9 +15,7 @@ export class ProvidersService {
     const existing = await this.providersRepository.findOne({ where: { email: data.email } });
     if (existing) throw new ConflictException('A provider with this email already exists');
 
-    console.log('[PROVIDER] Creating provider with email:', data.email, 'password length:', data.password?.length);
     const hashed = await bcrypt.hash(data.password, 10);
-    console.log('[PROVIDER] Hashed password length:', hashed.length);
     const provider = this.providersRepository.create({ ...data, password: hashed, status: 'pending' });
     const saved = await this.providersRepository.save(provider);
     const { password: _, ...result } = saved;
