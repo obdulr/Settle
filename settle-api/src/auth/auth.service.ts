@@ -35,15 +35,16 @@ export class AuthService {
     if (user && user.password) {
       try {
         const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) return null;
-        const { password: _, ...result } = user;
-        return result;
+        if (isPasswordValid) {
+          const { password: _, ...result } = user;
+          return result;
+        }
       } catch {
-        // Password might be null/invalid, fall through to provider check
+        // Password hash invalid, fall through to provider check
       }
     }
 
-    // Check providers
+    // Check providers (the email might belong to a provider, not a user)
     const provider = await this.providersRepository.findOne({
       where: { email },
       select: ['id', 'email', 'password', 'companyName', 'phone', 'status', 'creditBalance', 'isAcceptingLeads', 'subscriptionType', 'createdAt'],
@@ -51,17 +52,18 @@ export class AuthService {
     if (provider && provider.password) {
       try {
         const isPasswordValid = await bcrypt.compare(password, provider.password);
-        if (!isPasswordValid) return null;
-        const { password: _, ...result } = provider;
-        return {
-          ...result,
-          role: 'provider',
-          firstName: provider.companyName,
-          lastName: '',
-          phone: provider.phone || '',
-        };
+        if (isPasswordValid) {
+          const { password: _, ...result } = provider;
+          return {
+            ...result,
+            role: 'provider',
+            firstName: provider.companyName,
+            lastName: '',
+            phone: provider.phone || '',
+          };
+        }
       } catch {
-        return null;
+        // Invalid hash
       }
     }
 
