@@ -30,6 +30,7 @@ export class AuthService {
     // Check regular users first
     const user = await this.usersRepository.findOne({ where: { email } });
     if (user) {
+      if (!user.password) return null;
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) return null;
       const { password: _, ...result } = user;
@@ -39,6 +40,7 @@ export class AuthService {
     // Check providers
     const provider = await this.providersRepository.findOne({ where: { email } });
     if (provider) {
+      if (!provider.password) return null;
       const isPasswordValid = await bcrypt.compare(password, provider.password);
       if (!isPasswordValid) return null;
       const { password: _, ...result } = provider;
