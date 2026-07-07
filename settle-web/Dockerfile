@@ -4,15 +4,15 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.15.5 --activate
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy package files (no lockfile — it's at repo root, outside build context)
+COPY package.json ./
 COPY shared-sdk/package.json ./shared-sdk/
 
 # Create minimal workspace so workspace:* resolves
 RUN printf 'packages:\n  - .\n  - shared-sdk\n' > pnpm-workspace.yaml
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile=false
+RUN pnpm install --no-frozen-lockfile
 
 # Copy source code
 COPY . .
