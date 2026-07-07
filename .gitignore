@@ -19,6 +19,7 @@
 /out/
 .next/
 dist/
+!settle-web/shared-sdk/dist/
 build/
 *.log
 
