@@ -1,0 +1,176 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface AssessmentData {
+  totalDebt?: number;
+  debtTypes?: string[];
+  state?: string;
+  employmentStatus?: string;
+  monthlyIncome?: number;
+  monthsBehind?: number;
+  hasFiledBankruptcy?: boolean;
+  creditScore?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  tcpaConsent?: boolean;
+}
+
+@Injectable()
+export class AiService {
+  private readonly logger = new Logger(AiService.name);
+
+  constructor(private configService: ConfigService) {}
+
+  /**
+   * Conduct a conversational debt assessment using GPT-4.
+   * The AI asks questions one at a time, extracts debt info from responses,
+   * and builds a structured assessment over the conversation.
+   */
+  async conductAssessmentChat(
+    messages: ChatMessage[],
+    currentData: AssessmentData,
+  ): Promise<{ reply: string; extractedData: AssessmentData; isComplete: boolean }> {
+    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
+
+    if (!apiKey) {
+      return {
+        reply: "I'm sorry, the AI assistant isn't available right now. Please use our standard assessment form instead.",
+        extractedData: currentData,
+        isComplete: false,
+      };
+    }
+
+    const systemPrompt = `You are a compassionate debt relief advisor for Settle, a marketplace that connects people in debt with vetted relief providers.
+
+Your job is to conduct a debt assessment conversation. Ask ONE question at a time. Be empathetic, non-judgmental, and professional. Never give financial advice — just collect information.
+
+You need to collect this information over the conversation:
+1. Total unsecured debt amount (credit cards, medical bills, personal loans)
+2. Types of debt (credit_card, medical, personal_loan, student_loan)
+3. What state they live in (2-letter code)
+4. Employment status (employed, self_employed, unemployed, retired)
+5. Monthly income
+6. How many months behind on payments (0 if current)
+7. Whether they've filed bankruptcy
+8. Credit score range (poor, fair, good, very_good)
+9. Their name, email, and phone number (for provider contact)
+10. TCPA consent (permission to be contacted by providers)
+
+Current data collected so far:
+${JSON.stringify(currentData, null, 2)}
+
+Rules:
+- Ask ONE question at a time
+- Extract information from their responses and include it in extractedData
+- Be warm and empathetic — people in debt are stressed
+- When you have ALL required information, set isComplete to true and give them a summary
+- Never ask for sensitive info like SSN or bank account numbers
+- Keep responses concise (2-3 sentences max)
+- If they ask about specific providers or services, redirect to the assessment
+
+You MUST respond with a JSON object in this exact format:
+{
+  "reply": "your message to the user",
+  "extractedData": { ...any new fields you extracted from the latest user message... },
+  "isComplete": false
+}`;
+
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'system', content: systemPrompt }, ...messages],
+          temperature: 0.7,
+          max_tokens: 300,
+          response_format: { type: 'json_object' },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+
+      const data: any = await response.json();
+      const content = data.choices[0]?.message?.content || '{}';
+
+      try {
+        const parsed = JSON.parse(content);
+        return {
+          reply: parsed.reply || content,
+          extractedData: { ...currentData, ...parsed.extractedData },
+          isComplete: parsed.isComplete || false,
+        };
+      } catch {
+        // If not JSON, treat as plain text
+        return {
+          reply: content,
+          extractedData: currentData,
+          isComplete: false,
+        };
+      }
+    } catch (error) {
+      this.logger.error(`AI chat error: ${error}`);
+      return {
+        reply: "I'm having trouble connecting right now. Please try our standard assessment form.",
+        extractedData: currentData,
+        isComplete: false,
+      };
+    }
+  }
+
+  /**
+   * Generate a personalized debt relief recommendation summary.
+   */
+  async generateRecommendationSummary(
+    assessmentData: AssessmentData,
+    matchedProviders: any[],
+  ): Promise<string> {
+    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
+
+    if (!apiKey || matchedProviders.length === 0) {
+      return 'Based on your assessment, we\'ve matched you with several providers. Please review the comparison below.';
+    }
+
+    const prompt = `Based on this person's debt assessment, write a brief (3-4 sentence) personalized summary explaining why these providers are a good match.
+
+Assessment: ${JSON.stringify(assessmentData)}
+Matched providers: ${JSON.stringify(matchedProviders.map((p) => ({ name: p.companyName, matchScore: p.matchScore, matchReasons: p.matchReasons })))}
+
+Be encouraging and specific. Mention their debt amount and how the providers can help.`;
+
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 200,
+        }),
+      });
+
+      if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`);
+      const data: any = await response.json();
+      return data.choices[0]?.message?.content || '';
+    } catch (error) {
+      this.logger.error(`AI summary error: ${error}`);
+      return 'We\'ve matched you with providers that fit your specific debt situation. Review the options below to find your best match.';
+    }
+  }
+}

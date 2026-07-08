@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const STEPS = [
   { id: 'debt_amount', label: 'Debt Amount', icon: '$' },
@@ -210,6 +211,12 @@ export default function AssessmentPage() {
           <p className="text-sm text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide mb-2">Free Debt Assessment</p>
           <h1 className="text-3xl font-bold text-black dark:text-white">Find your path to financial peace</h1>
           <p className="text-zinc-500 dark:text-zinc-400 mt-2">2 minutes · No credit check · No obligation</p>
+          <Link
+            href="/assessment/chat"
+            className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+          >
+            Prefer to chat? Talk to our AI Debt Advisor →
+          </Link>
         </div>
 
         {/* Step indicator dots */}

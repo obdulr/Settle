@@ -53,6 +53,16 @@ export class Lead {
   @Column({ type: 'int', default: 0 })
   qualityScore!: number; // 0-100
 
+  // ML-enhanced lead scoring
+  @Column({ type: 'int', nullable: true })
+  mlScore?: number;
+
+  @Column({ type: 'simple-json', nullable: true })
+  mlFactors?: Record<string, number>;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  mlTier?: string;
+
   @Column({ type: 'boolean', default: false })
   isVerified!: boolean;
 

@@ -1,15 +1,21 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Lead } from '../entities/lead.entity';
 import { ProvidersService } from '../providers/providers.service';
+import { MatchingService } from '../matching/matching.service';
+import { LeadScoringService } from '../ai/lead-scoring.service';
 
 @Injectable()
 export class LeadsService {
+  private readonly logger = new Logger(LeadsService.name);
+
   constructor(
     @InjectRepository(Lead)
     private leadsRepository: Repository<Lead>,
     private providersService: ProvidersService,
+    private matchingService: MatchingService,
+    private leadScoringService: LeadScoringService,
   ) {}
 
   async submitAssessment(data: Partial<Lead>): Promise<Lead> {
@@ -18,16 +24,41 @@ export class LeadsService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
+    // ML-enhanced lead scoring
+    let mlScore: number | undefined;
+    let mlFactors: Record<string, number> | undefined;
+    let mlTier: string | undefined;
+    try {
+      const mlResult = await this.leadScoringService.scoreLead(data);
+      mlScore = mlResult.score;
+      mlFactors = mlResult.factors;
+      mlTier = mlResult.tier;
+    } catch (error) {
+      this.logger.error(`ML scoring failed, falling back to rule-based: ${error}`);
+    }
+
     const lead = this.leadsRepository.create({
       ...data,
       qualityScore: score,
+      mlScore,
+      mlFactors,
+      mlTier,
       status: score >= 40 ? 'available' : 'new',
       expiresAt,
       tcpaConsent: true,
       consentTimestamp: new Date(),
     });
 
-    return this.leadsRepository.save(lead);
+    const saved = await this.leadsRepository.save(lead);
+
+    // Auto-trigger matching after lead submission
+    try {
+      await this.matchingService.findMatchesForLead(saved.id);
+    } catch (error) {
+      this.logger.error(`Auto-matching failed for lead ${saved.id}: ${error}`);
+    }
+
+    return saved;
   }
 
   private calculateQualityScore(data: Partial<Lead>): number {
