@@ -1,0 +1,399 @@
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, In, FindManyOptions } from 'typeorm';
+import { Match } from '../entities/match.entity';
+import { Lead } from '../entities/lead.entity';
+import { Provider } from '../entities/provider.entity';
+
+export interface ScoreResult {
+  score: number;
+  reasons: string[];
+}
+
+export type ProviderWithMatch = Partial<Provider> & {
+  id: string;
+  matchScore: number;
+  matchReasons: string[];
+};
+
+export type LeadWithMatch = Partial<Lead> & {
+  id: string;
+  matchScore: number;
+  matchReasons: string[];
+};
+
+@Injectable()
+export class MatchingService {
+  private readonly logger = new Logger(MatchingService.name);
+
+  constructor(
+    @InjectRepository(Match)
+    private matchesRepository: Repository<Match>,
+    @InjectRepository(Lead)
+    private leadsRepository: Repository<Lead>,
+    @InjectRepository(Provider)
+    private providersRepository: Repository<Provider>,
+  ) {}
+
+  /**
+   * Core matching algorithm. Scores a lead against a provider (0-100).
+   *
+   *  - State match (25 pts): lead.state in provider.statesServed[]
+   *  - Debt type match (25 pts): overlap between lead.debtTypes[] and provider.debtTypes[]
+   *  - Debt amount in range (20 pts): lead.totalDebt within [minDebtAmount, maxDebtAmount]
+   *  - Service type match (15 pts): provider offers debt_settlement
+   *  - Provider quality bonus (15 pts): based on avgRating, bbbRating, isAfccMember
+   */
+  scoreMatch(lead: Partial<Lead>, provider: Partial<Provider>): ScoreResult {
+    let score = 0;
+    const reasons: string[] = [];
+
+    // 1. State match (25)
+    if (provider.statesServed && provider.statesServed.length > 0) {
+      if (lead.state && provider.statesServed.includes(lead.state)) {
+        score += 25;
+        reasons.push('state_match');
+      }
+    } else {
+      // Provider serves all states (empty array treated as nationwide)
+      if (lead.state) {
+        score += 25;
+        reasons.push('state_match_nationwide');
+      }
+    }
+
+    // 2. Debt type match (25)
+    const leadDebtTypes = lead.debtTypes ?? [];
+    const providerDebtTypes = provider.debtTypes ?? [];
+    if (leadDebtTypes.length > 0 && providerDebtTypes.length > 0) {
+      const overlap = leadDebtTypes.filter((t) => providerDebtTypes.includes(t));
+      if (overlap.length > 0) {
+        // Full match if all lead debt types are covered, partial otherwise
+        const ratio = overlap.length / leadDebtTypes.length;
+        score += Math.round(25 * ratio);
+        reasons.push('debt_type_match');
+      }
+    } else if (providerDebtTypes.length === 0) {
+      // Provider accepts all debt types
+      if (leadDebtTypes.length > 0) {
+        score += 25;
+        reasons.push('debt_type_match_all');
+      }
+    }
+
+    // 3. Debt amount in range (20)
+    const totalDebt = Number(lead.totalDebt) || 0;
+    const minDebt = Number(provider.minDebtAmount) || 0;
+    const maxDebt = provider.maxDebtAmount ? Number(provider.maxDebtAmount) : null;
+    if (totalDebt >= minDebt && (maxDebt === null || totalDebt <= maxDebt)) {
+      score += 20;
+      reasons.push('debt_amount_in_range');
+    } else if (totalDebt >= minDebt * 0.8 && maxDebt !== null && totalDebt <= maxDebt * 1.2) {
+      // Near-range partial credit
+      score += 10;
+      reasons.push('debt_amount_near_range');
+    }
+
+    // 4. Service type match (15)
+    const providerServiceTypes = provider.serviceTypes ?? [];
+    if (providerServiceTypes.includes('debt_settlement')) {
+      score += 15;
+      reasons.push('service_type_debt_settlement');
+    } else if (providerServiceTypes.length > 0) {
+      // Partial credit for any relevant service
+      score += 5;
+      reasons.push('service_type_partial');
+    }
+
+    // 5. Provider quality bonus (15)
+    let qualityBonus = 0;
+    if (provider.avgRating) {
+      const rating = Number(provider.avgRating) || 0;
+      // 5 stars -> 7 pts, scaled
+      qualityBonus += Math.round((rating / 5) * 7);
+    }
+    if (provider.bbbRating) {
+      const bbb = provider.bbbRating.toUpperCase();
+      if (bbb.startsWith('A')) qualityBonus += 4;
+      else if (bbb.toUpperCase() === 'B' || bbb.startsWith('B')) qualityBonus += 2;
+    }
+    if (provider.isAfccMember) {
+      qualityBonus += 4;
+    }
+    qualityBonus = Math.min(qualityBonus, 15);
+    if (qualityBonus > 0) {
+      score += qualityBonus;
+      reasons.push('provider_quality_bonus');
+    }
+
+    score = Math.min(score, 100);
+    return { score, reasons };
+  }
+
+  /**
+   * Find all active providers that match a lead, create/update Match records,
+   * and return them sorted by score descending.
+   */
+  async findMatchesForLead(leadId: string): Promise<Match[]> {
+    const lead = await this.leadsRepository.findOne({ where: { id: leadId } });
+    if (!lead) throw new NotFoundException('Lead not found');
+
+    const providers = await this.providersRepository.find({
+      where: { status: 'active', isAcceptingLeads: true },
+    });
+
+    const matches: Match[] = [];
+    for (const provider of providers) {
+      const { score, reasons } = this.scoreMatch(lead, provider);
+      if (score <= 0) continue;
+
+      // Upsert match record (unique on leadId + providerId)
+      let match = await this.matchesRepository.findOne({
+        where: { leadId, providerId: provider.id },
+      });
+      if (match) {
+        match.matchScore = score;
+        match.matchReasons = reasons;
+        match = await this.matchesRepository.save(match);
+      } else {
+        match = this.matchesRepository.create({
+          leadId,
+          providerId: provider.id,
+          matchScore: score,
+          matchReasons: reasons,
+          status: 'suggested',
+        });
+        match = await this.matchesRepository.save(match);
+      }
+      matches.push(match);
+    }
+
+    matches.sort((a, b) => b.matchScore - a.matchScore);
+    return matches;
+  }
+
+  /**
+   * Find all available leads that match a provider's criteria, create/update
+   * Match records, and return them sorted by score descending.
+   */
+  async findMatchesForProvider(providerId: string): Promise<Match[]> {
+    const provider = await this.providersRepository.findOne({ where: { id: providerId } });
+    if (!provider) throw new NotFoundException('Provider not found');
+
+    const leads = await this.leadsRepository.find({
+      where: { status: In(['available', 'new']) },
+    });
+
+    const matches: Match[] = [];
+    for (const lead of leads) {
+      const { score, reasons } = this.scoreMatch(lead, provider);
+      if (score <= 0) continue;
+
+      let match = await this.matchesRepository.findOne({
+        where: { leadId: lead.id, providerId },
+      });
+      if (match) {
+        match.matchScore = score;
+        match.matchReasons = reasons;
+        match = await this.matchesRepository.save(match);
+      } else {
+        match = this.matchesRepository.create({
+          leadId: lead.id,
+          providerId,
+          matchScore: score,
+          matchReasons: reasons,
+          status: 'suggested',
+        });
+        match = await this.matchesRepository.save(match);
+      }
+      matches.push(match);
+    }
+
+    matches.sort((a, b) => b.matchScore - a.matchScore);
+    return matches;
+  }
+
+  /**
+   * For consumers: returns matched providers with scores (public-facing).
+   * Excludes sensitive provider fields (password, stripeCustomerId, etc.).
+   */
+  async getRecommendedProviders(leadId: string): Promise<ProviderWithMatch[]> {
+    const matches = await this.findMatchesForLead(leadId);
+
+    const providerIds = matches.map((m) => m.providerId);
+    if (providerIds.length === 0) return [];
+
+    const providers = await this.providersRepository.find({
+      where: { id: In(providerIds) },
+    });
+
+    const providerMap = new Map(providers.map((p) => [p.id, p]));
+    const result: ProviderWithMatch[] = [];
+    for (const match of matches) {
+      const provider = providerMap.get(match.providerId);
+      if (!provider) continue;
+      const { password: _pw, stripeCustomerId: _sc, ...safe } = provider;
+      result.push({
+        ...safe,
+        matchScore: match.matchScore,
+        matchReasons: match.matchReasons ?? [],
+      });
+    }
+    return result;
+  }
+
+  /**
+   * For providers: returns matched leads with scores. Sensitive consumer
+   * contact info (phone, email) is masked unless the lead was purchased by
+   * this provider.
+   */
+  async getMatchedLeadsForProvider(providerId: string): Promise<LeadWithMatch[]> {
+    const matches = await this.findMatchesForProvider(providerId);
+
+    const leadIds = matches.map((m) => m.leadId);
+    if (leadIds.length === 0) return [];
+
+    const leads = await this.leadsRepository.find({ where: { id: In(leadIds) } });
+    const leadMap = new Map(leads.map((l) => [l.id, l]));
+
+    const result: LeadWithMatch[] = [];
+    for (const match of matches) {
+      const lead = leadMap.get(match.leadId);
+      if (!lead) continue;
+
+      const purchased = lead.purchasedBy === providerId;
+      const safe: Partial<Lead> = { ...lead };
+      if (!purchased) {
+        safe.phone = this.maskValue(lead.phone);
+        safe.email = this.maskEmail(lead.email);
+        safe.lastName = this.maskValue(lead.lastName);
+      }
+
+      const { ...rest } = safe;
+      result.push({
+        ...rest,
+        id: lead.id,
+        matchScore: match.matchScore,
+        matchReasons: match.matchReasons ?? [],
+      } as LeadWithMatch);
+    }
+    return result;
+  }
+
+  /**
+   * Consumer requests contact from a specific provider. Sets match status to
+   * 'requested' and records the timestamp.
+   */
+  async requestContact(leadId: string, providerId: string): Promise<Match> {
+    const lead = await this.leadsRepository.findOne({ where: { id: leadId } });
+    if (!lead) throw new NotFoundException('Lead not found');
+
+    const provider = await this.providersRepository.findOne({ where: { id: providerId } });
+    if (!provider) throw new NotFoundException('Provider not found');
+    if (provider.status !== 'active' || !provider.isAcceptingLeads) {
+      throw new BadRequestException('Provider is not currently accepting leads');
+    }
+
+    let match = await this.matchesRepository.findOne({ where: { leadId, providerId } });
+    if (match) {
+      if (match.status === 'declined') {
+        throw new BadRequestException('This match has been declined');
+      }
+      match.status = 'requested';
+      match.requestedAt = new Date();
+      match = await this.matchesRepository.save(match);
+    } else {
+      const { score, reasons } = this.scoreMatch(lead, provider);
+      match = this.matchesRepository.create({
+        leadId,
+        providerId,
+        matchScore: score,
+        matchReasons: reasons,
+        status: 'requested',
+        requestedAt: new Date(),
+      });
+      match = await this.matchesRepository.save(match);
+    }
+    return match;
+  }
+
+  /**
+   * Provider or consumer declines a match. Sets status to 'declined'.
+   */
+  async declineMatch(matchId: string, userType: 'provider' | 'consumer'): Promise<Match> {
+    const match = await this.matchesRepository.findOne({ where: { id: matchId } });
+    if (!match) throw new NotFoundException('Match not found');
+    if (match.status === 'purchased') {
+      throw new BadRequestException('Cannot decline a purchased match');
+    }
+    match.status = 'declined';
+    match.declinedAt = new Date();
+    return this.matchesRepository.save(match);
+  }
+
+  /**
+   * Provider's match history (all statuses).
+   */
+  async getMatchHistory(providerId: string): Promise<Match[]> {
+    return this.matchesRepository.find({
+      where: { providerId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Admin stats: total matches, requested, purchased, conversion rate.
+   */
+  async getMatchStats(): Promise<{
+    total: number;
+    suggested: number;
+    viewed: number;
+    requested: number;
+    declined: number;
+    purchased: number;
+    expired: number;
+    conversionRate: number;
+  }> {
+    const total = await this.matchesRepository.count();
+    const suggested = await this.matchesRepository.count({ where: { status: 'suggested' } });
+    const viewed = await this.matchesRepository.count({ where: { status: 'viewed' } });
+    const requested = await this.matchesRepository.count({ where: { status: 'requested' } });
+    const declined = await this.matchesRepository.count({ where: { status: 'declined' } });
+    const purchased = await this.matchesRepository.count({ where: { status: 'purchased' } });
+    const expired = await this.matchesRepository.count({ where: { status: 'expired' } });
+
+    const conversionRate = total > 0 ? Number(((purchased / total) * 100).toFixed(2)) : 0;
+
+    return { total, suggested, viewed, requested, declined, purchased, expired, conversionRate };
+  }
+
+  /**
+   * Admin: all matches with pagination.
+   */
+  async getAllMatches(page = 1, limit = 20): Promise<{ data: Match[]; total: number; page: number; limit: number }> {
+    const skip = (page - 1) * limit;
+    const options: FindManyOptions<Match> = {
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    };
+    const [data, total] = await this.matchesRepository.findAndCount(options);
+    return { data, total, page, limit };
+  }
+
+  // --- helpers ---
+
+  private maskValue(value: string | undefined): string {
+    if (!value) return '';
+    if (value.length <= 2) return '**';
+    return value.slice(0, 1) + '*'.repeat(Math.max(value.length - 2, 1)) + value.slice(-1);
+  }
+
+  private maskEmail(email: string | undefined): string {
+    if (!email) return '';
+    const [local, domain] = email.split('@');
+    if (!domain) return this.maskValue(email);
+    const maskedLocal = local.length <= 2 ? '**' : local.slice(0, 2) + '*'.repeat(Math.max(local.length - 2, 1));
+    return `${maskedLocal}@${domain}`;
+  }
+}

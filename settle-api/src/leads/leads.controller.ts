@@ -39,4 +39,24 @@ export class LeadsController {
   async getStats() {
     return this.leadsService.getLeadStats();
   }
+
+  // Provider-only: full lead details before purchase (sensitive info masked)
+  @Get(':id/details')
+  @UseGuards(JwtAuthGuard)
+  async getLeadDetails(@Param('id') id: string, @Request() req) {
+    return this.leadsService.getLeadDetails(id, req.user.sub);
+  }
+
+  // Provider-only: purchase multiple leads (body: { leadIds: string[] })
+  @Post('batch-purchase')
+  @UseGuards(JwtAuthGuard)
+  async batchPurchaseLeads(@Body() body: { leadIds: string[] }, @Request() req) {
+    return this.leadsService.batchPurchaseLeads(body.leadIds, req.user.sub);
+  }
+
+  // Consumer: check if their lead has been purchased
+  @Get(':id/status')
+  async getLeadStatus(@Param('id') id: string) {
+    return this.leadsService.getLeadStatus(id);
+  }
 }

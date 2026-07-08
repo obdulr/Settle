@@ -8,6 +8,7 @@ import { Activity } from './entities/activity.entity';
 import { Debt } from './entities/debt.entity';
 import { Provider } from './entities/provider.entity';
 import { Lead } from './entities/lead.entity';
+import { Match } from './entities/match.entity';
 import { AuthModule } from './auth/auth.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { DebtsModule } from './debts/debts.module';
@@ -15,6 +16,7 @@ import { ProvidersModule } from './providers/providers.module';
 import { LeadsModule } from './leads/leads.module';
 import { StripeModule } from './stripe/stripe.module';
 import { AdminModule } from './admin/admin.module';
+import { MatchingModule } from './matching/matching.module';
 
 @Module({
   imports: [
@@ -29,14 +31,14 @@ import { AdminModule } from './admin/admin.module';
         idleTimeoutMillis: 30000,
         keepAlive: true,
       },
-      entities: [User, Activity, Debt, Provider, Lead],
+      entities: [User, Activity, Debt, Provider, Lead, Match],
       synchronize: process.env.NODE_ENV !== 'production' || process.env.DB_SYNC === 'true',
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
       retryAttempts: 5,
       retryDelay: 3000,
     }),
-    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead]),
+    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead, Match]),
     AuthModule,
     ActivitiesModule,
     DebtsModule,
@@ -44,6 +46,7 @@ import { AdminModule } from './admin/admin.module';
     LeadsModule,
     StripeModule,
     AdminModule,
+    MatchingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

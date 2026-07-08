@@ -28,6 +28,17 @@ export default function Navigation() {
         { href: '/register', label: 'Register' },
       ];
 
+  // Role-gated items (provider portal + admin)
+  const roleItems: { href: string; label: string }[] = [];
+  if (authenticated && user) {
+    if (user.role === 'provider') {
+      roleItems.push({ href: '/portal', label: 'Provider Portal' });
+    }
+    if (user.role === 'admin') {
+      roleItems.push({ href: '/admin', label: 'Admin' });
+    }
+  }
+
   const isActive = (href: string) => pathname === href;
 
   return (
@@ -61,6 +72,19 @@ export default function Navigation() {
           {/* Auth links + user info */}
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex sm:items-center sm:space-x-4">
+              {roleItems.map(item => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`text-sm font-medium transition-colors ${
+                    isActive(item.href)
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
               {authItems.map(item => (
                 <Link
                   key={item.href}
