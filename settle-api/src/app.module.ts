@@ -14,6 +14,7 @@ import { DebtsModule } from './debts/debts.module';
 import { ProvidersModule } from './providers/providers.module';
 import { LeadsModule } from './leads/leads.module';
 import { StripeModule } from './stripe/stripe.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { StripeModule } from './stripe/stripe.module';
     ProvidersModule,
     LeadsModule,
     StripeModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

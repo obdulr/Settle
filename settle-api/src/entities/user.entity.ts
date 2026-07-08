@@ -11,6 +11,7 @@ export class User {
   @Column({ name: 'password', type: 'varchar', length: 255, nullable: true })
   password!: string; // Bcrypt hashed
 
+  // Valid roles: 'customer', 'provider', 'admin'
   @Column({ type: 'varchar', length: 50, default: 'customer', nullable: true })
   role?: string;
 

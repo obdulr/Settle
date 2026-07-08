@@ -142,6 +142,66 @@ export class EmailService {
     }
   }
 
+  async sendProviderApprovalEmail(toEmail: string, companyName: string): Promise<boolean> {
+    const subject = 'Your provider account has been approved — Settle In Peace';
+    const html = this.renderProviderApprovalTemplate(companyName);
+
+    if (!this.resend) {
+      this.logger.log(`[DEV EMAIL] To: ${toEmail} | Subject: ${subject}`);
+      return true;
+    }
+
+    try {
+      const { error } = await this.resend.emails.send({
+        from: this.fromEmail,
+        to: toEmail,
+        subject,
+        html,
+      });
+
+      if (error) {
+        this.logger.error(`Failed to send provider approval email: ${error.message}`);
+        return false;
+      }
+
+      this.logger.log(`Provider approval email sent to ${toEmail}`);
+      return true;
+    } catch (err) {
+      this.logger.error(`Email send error: ${err instanceof Error ? err.message : String(err)}`);
+      return false;
+    }
+  }
+
+  async sendProviderRejectionEmail(toEmail: string, companyName: string, reason?: string): Promise<boolean> {
+    const subject = 'Your provider application was not approved — Settle In Peace';
+    const html = this.renderProviderRejectionTemplate(companyName, reason);
+
+    if (!this.resend) {
+      this.logger.log(`[DEV EMAIL] To: ${toEmail} | Subject: ${subject}`);
+      return true;
+    }
+
+    try {
+      const { error } = await this.resend.emails.send({
+        from: this.fromEmail,
+        to: toEmail,
+        subject,
+        html,
+      });
+
+      if (error) {
+        this.logger.error(`Failed to send provider rejection email: ${error.message}`);
+        return false;
+      }
+
+      this.logger.log(`Provider rejection email sent to ${toEmail}`);
+      return true;
+    } catch (err) {
+      this.logger.error(`Email send error: ${err instanceof Error ? err.message : String(err)}`);
+      return false;
+    }
+  }
+
   private renderVerificationTemplate(verifyUrl: string, firstName?: string): string {
     return `
       <!DOCTYPE html>
@@ -231,6 +291,53 @@ export class EmailService {
         <div style="text-align: center; margin: 32px 0;">
           <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://settleinpeace.com'}/assessment" style="display: inline-block; background: #2563eb; color: white; text-decoration: none; font-weight: 700; padding: 12px 32px; border-radius: 8px;">Take the Free Assessment</a>
         </div>
+        <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 32px 0;">
+        <p style="color: #a1a1aa; font-size: 12px;">Settle In Peace, Inc. — The debt relief marketplace that puts you in control.</p>
+      </body>
+      </html>
+    `;
+  }
+
+  private renderProviderApprovalTemplate(companyName: string): string {
+    const portalUrl = process.env.FRONTEND_URL || 'http://localhost:3025';
+    return `
+      <!DOCTYPE html>
+      <html>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <h1 style="color: #2563eb; font-size: 24px; margin: 0;">Settle<span style="color: #60a5fa;">InPeace</span></h1>
+        </div>
+        <h2 style="color: #18181b; font-size: 20px;">Your provider account has been approved</h2>
+        <p style="color: #71717a; font-size: 16px; line-height: 1.6;">
+          Great news! The provider account for <strong>${companyName}</strong> has been reviewed and approved. You can now log in to your provider portal to start receiving leads and managing your marketplace presence.
+        </p>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${portalUrl}/providers/portal" style="display: inline-block; background: #2563eb; color: white; text-decoration: none; font-weight: 700; padding: 12px 32px; border-radius: 8px;">Go to Provider Portal</a>
+        </div>
+        <p style="color: #a1a1aa; font-size: 14px;">If you have any questions, our team is here to help.</p>
+        <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 32px 0;">
+        <p style="color: #a1a1aa; font-size: 12px;">Settle In Peace, Inc. — The debt relief marketplace that puts you in control.</p>
+      </body>
+      </html>
+    `;
+  }
+
+  private renderProviderRejectionTemplate(companyName: string, reason?: string): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <h1 style="color: #2563eb; font-size: 24px; margin: 0;">Settle<span style="color: #60a5fa;">InPeace</span></h1>
+        </div>
+        <h2 style="color: #18181b; font-size: 20px;">Your provider application was not approved</h2>
+        <p style="color: #71717a; font-size: 16px; line-height: 1.6;">
+          Thank you for your interest in joining the Settle In Peace marketplace. After reviewing the application for <strong>${companyName}</strong>, we are unable to approve the account at this time.
+        </p>
+        ${reason ? `<p style="color: #71717a; font-size: 16px; line-height: 1.6;"><strong>Reason:</strong> ${reason}</p>` : ''}
+        <p style="color: #71717a; font-size: 16px; line-height: 1.6;">
+          If you believe this was in error or would like to reapply in the future, please contact our team.
+        </p>
         <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 32px 0;">
         <p style="color: #a1a1aa; font-size: 12px;">Settle In Peace, Inc. — The debt relief marketplace that puts you in control.</p>
       </body>
