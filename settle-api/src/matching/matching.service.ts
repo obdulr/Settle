@@ -10,21 +10,40 @@ export interface ScoreResult {
   reasons: string[];
 }
 
+export type ProviderTier = 'premium' | 'standard' | 'basic';
+export type LeadTier = 'premium' | 'standard' | 'basic';
+
 export type ProviderWithMatch = Partial<Provider> & {
   id: string;
   matchScore: number;
   matchReasons: string[];
+  matchId?: string;
+  providerTier?: ProviderTier;
 };
 
 export type LeadWithMatch = Partial<Lead> & {
   id: string;
   matchScore: number;
   matchReasons: string[];
+  matchId?: string;
+  leadTier?: LeadTier;
 };
+
+export interface AutoMatchResult {
+  matched: boolean;
+  match?: Match;
+  provider?: Partial<Provider>;
+  leadId: string;
+  threshold: number;
+  topScore: number;
+  reason: string;
+}
 
 @Injectable()
 export class MatchingService {
   private readonly logger = new Logger(MatchingService.name);
+  /** Minimum score required for auto-assignment. Override with AUTO_MATCH_THRESHOLD env. */
+  private readonly autoMatchThreshold = Number(process.env.AUTO_MATCH_THRESHOLD) || 70;
 
   constructor(
     @InjectRepository(Match)
@@ -36,6 +55,36 @@ export class MatchingService {
   ) {}
 
   /**
+   * Derive a provider's quality tier from reputation + membership signals.
+   *  - premium:  AFCC member with strong ratings, or a marketplace seat
+   *  - standard: solid ratings or IAPDA member
+   *  - basic:    everyone else
+   */
+  getProviderTier(provider: Partial<Provider>): ProviderTier {
+    const rating = Number(provider.avgRating) || 0;
+    const seat = provider.subscriptionType === 'marketplace_seat';
+    if (seat || (provider.isAfccMember && rating >= 4.5)) return 'premium';
+    if (rating >= 4.0 || provider.isAfccMember || provider.isIapdaMember) return 'standard';
+    return 'basic';
+  }
+
+  /**
+   * Derive a lead's quality tier from ML tier / rule-based quality score.
+   *  - premium: mlTier === 'premium' or qualityScore >= 70
+   *  - standard: mlTier === 'standard' or qualityScore >= 40
+   *  - basic:    otherwise
+   */
+  getLeadTier(lead: Partial<Lead>): LeadTier {
+    if (lead.mlTier === 'premium' || (lead.mlTier == null && lead.qualityScore != null && lead.qualityScore >= 70)) {
+      return 'premium';
+    }
+    if (lead.mlTier === 'standard' || (lead.mlTier == null && lead.qualityScore != null && lead.qualityScore >= 40)) {
+      return 'standard';
+    }
+    return 'basic';
+  }
+
+  /**
    * Core matching algorithm. Scores a lead against a provider (0-100).
    *
    *  - State match (25 pts): lead.state in provider.statesServed[]
@@ -43,6 +92,7 @@ export class MatchingService {
    *  - Debt amount in range (20 pts): lead.totalDebt within [minDebtAmount, maxDebtAmount]
    *  - Service type match (15 pts): provider offers debt_settlement
    *  - Provider quality bonus (15 pts): based on avgRating, bbbRating, isAfccMember
+   *  - Tier alignment bonus (up to 10 pts): premium providers get premium leads first
    */
   scoreMatch(lead: Partial<Lead>, provider: Partial<Provider>): ScoreResult {
     let score = 0;
@@ -124,6 +174,21 @@ export class MatchingService {
     if (qualityBonus > 0) {
       score += qualityBonus;
       reasons.push('provider_quality_bonus');
+    }
+
+    // 6. Tier alignment bonus (10) — premium providers get premium leads first.
+    // Exact tier match gets full bonus; adjacent tiers get partial credit so
+    // premium providers still rank above standard ones for standard leads.
+    const providerTier = this.getProviderTier(provider);
+    const leadTier = this.getLeadTier(lead);
+    const tierRank: Record<string, number> = { premium: 3, standard: 2, basic: 1 };
+    const tierDiff = Math.abs(tierRank[providerTier] - tierRank[leadTier]);
+    if (tierDiff === 0) {
+      score += 10;
+      reasons.push(`tier_alignment_${leadTier}`);
+    } else if (tierDiff === 1) {
+      score += 5;
+      reasons.push('tier_alignment_partial');
     }
 
     score = Math.min(score, 100);
@@ -235,8 +300,10 @@ export class MatchingService {
       const { password: _pw, stripeCustomerId: _sc, ...safe } = provider;
       result.push({
         ...safe,
+        matchId: match.id,
         matchScore: match.matchScore,
         matchReasons: match.matchReasons ?? [],
+        providerTier: this.getProviderTier(provider),
       });
     }
     return result;

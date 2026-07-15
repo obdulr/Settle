@@ -53,6 +53,9 @@ export class Lead {
   @Column({ type: 'int', default: 0 })
   qualityScore!: number; // 0-100
 
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  qualityTier?: string; // premium, qualified, standard, low
+
   // ML-enhanced lead scoring
   @Column({ type: 'int', nullable: true })
   mlScore?: number;

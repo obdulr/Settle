@@ -87,6 +87,22 @@ export class User {
   @Column({ name: 'reset_token_expires', type: 'timestamp', nullable: true })
   resetTokenExpires?: Date;
 
+  // Coaching subscription billing ($49/month)
+  @Column({ name: 'stripe_customer_id', length: 255, nullable: true })
+  stripeCustomerId?: string;
+
+  @Column({ name: 'stripe_subscription_id', length: 255, nullable: true })
+  stripeSubscriptionId?: string;
+
+  @Column({ name: 'coaching_subscription_status', length: 50, nullable: true })
+  coachingSubscriptionStatus?: string; // active, past_due, canceled, trialing
+
+  @Column({ name: 'coaching_current_period_end', type: 'timestamp', nullable: true })
+  coachingCurrentPeriodEnd?: Date;
+
+  @Column({ name: 'coaching_cancel_at_period_end', type: 'boolean', default: false, nullable: true })
+  coachingCancelAtPeriodEnd?: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

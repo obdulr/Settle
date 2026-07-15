@@ -96,6 +96,25 @@ export class Provider {
   @Column({ type: 'varchar', length: 255, nullable: true })
   stripeCustomerId?: string;
 
+  // Subscription billing (marketplace seat plans)
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'stripe_subscription_id' })
+  stripeSubscriptionId?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'subscription_status' })
+  subscriptionStatus?: string; // active, past_due, canceled, trialing, etc.
+
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'subscription_tier' })
+  subscriptionTier?: string; // starter, growth, scale
+
+  @Column({ type: 'int', nullable: true, name: 'subscription_seats' })
+  subscriptionSeats?: number;
+
+  @Column({ type: 'timestamp', nullable: true, name: 'current_period_end' })
+  currentPeriodEnd?: Date;
+
+  @Column({ type: 'boolean', default: false, name: 'cancel_at_period_end' })
+  cancelAtPeriodEnd!: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

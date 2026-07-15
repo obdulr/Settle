@@ -15,10 +15,12 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <h3 className="text-white font-semibold text-sm mb-4">Legal</h3>
+            <h3 className="text-white font-semibold text-sm mb-4">Legal &amp; Compliance</h3>
             <ul className="space-y-2 text-sm text-zinc-400">
               <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
               <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/disclosures" className="hover:text-white transition-colors">Disclosures</Link></li>
+              <li><Link href="/disclosures#affiliate" className="hover:text-white transition-colors">Affiliate Disclosure</Link></li>
               <li><a href="mailto:help@settleinpeace.com" className="hover:text-white transition-colors">Contact</a></li>
             </ul>
           </div>
@@ -47,6 +49,21 @@ export default function Footer() {
             <strong className="text-zinc-400">Important:</strong> Debt settlement may negatively impact your credit score. Forgiven debt over $600 may be considered taxable income by the IRS. Results vary based on individual circumstances. Programs typically take 24-48 months. Not all clients complete their program. Not available in all states. Please consult a tax advisor regarding tax implications of debt settlement.
           </p>
           <p>
+            <strong className="text-zinc-400">Not a Government Agency:</strong> Settle In Peace is a private company and is not affiliated with, endorsed by, or sponsored by any government agency, including the Consumer Financial Protection Bureau (CFPB), the Federal Trade Commission (FTC), or any state regulatory body. To file a complaint with the CFPB, visit{' '}
+            <a
+              href="https://www.consumerfinance.gov/complaint/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-zinc-300"
+            >
+              consumerfinance.gov/complaint
+            </a>
+            .
+          </p>
+          <p>
+            <strong className="text-zinc-400">State Licensing:</strong> Debt relief providers are subject to state licensing requirements that vary by state. Settle In Peace does not provide debt settlement services directly and therefore is not required to hold state debt settlement licenses; however, each partner provider on our marketplace is responsible for maintaining the licenses, registrations, and surety bonds required in the states where they operate. Availability of services may vary by state. Consumers should verify a provider&apos;s licensing status with their state regulator before enrolling.
+          </p>
+          <p>
             <strong className="text-zinc-400">TCPA Consent:</strong> By using our assessment tool, you consent to be contacted by Settle In Peace and its partner providers via phone, email, or text message regarding your debt situation. Standard message and data rates may apply. You may opt out at any time.
           </p>
         </div>
@@ -56,6 +73,12 @@ export default function Footer() {
             <Link href="/terms" className="hover:text-zinc-400 transition-colors">Terms of Service</Link>
             <span>·</span>
             <Link href="/privacy" className="hover:text-zinc-400 transition-colors">Privacy Policy</Link>
+            <span>·</span>
+            <Link href="/disclosures" className="hover:text-zinc-400 transition-colors">Disclosures</Link>
+            <span>·</span>
+            <Link href="/disclosures#affiliate" className="hover:text-zinc-400 transition-colors">Affiliate Disclosure</Link>
+            <span>·</span>
+            <a href="https://www.consumerfinance.gov/complaint/" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-400 transition-colors">File a CFPB Complaint</a>
             <span>·</span>
             <a href="mailto:help@settleinpeace.com" className="hover:text-zinc-400 transition-colors">Contact</a>
           </div>
