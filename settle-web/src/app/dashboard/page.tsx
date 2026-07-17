@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createJsonApiClient } from '@settle/shared-sdk/auth';
 import { getStoredToken, getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
+import ComplianceDisclosure from '../../components/ComplianceDisclosure';
 
 interface UserProfile {
   id: string;
@@ -192,6 +193,11 @@ export default function DashboardPage() {
           <div className="text-zinc-600 dark:text-zinc-400">
             <p>No recent activity to display.</p>
           </div>
+        </div>
+
+        {/* Compliance disclosures */}
+        <div className="mt-8">
+          <ComplianceDisclosure />
         </div>
       </div>
     </div>

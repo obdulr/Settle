@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import ComplianceDisclosure from '../../components/ComplianceDisclosure';
 
 const STEPS = [
   { id: 'debt_amount', label: 'Debt Amount', icon: '$' },
@@ -596,6 +597,11 @@ export default function AssessmentPage() {
           <span>✓ 100% Free</span>
           <span>✓ Confidential</span>
         </div>
+      </div>
+
+      {/* Compliance disclosures */}
+      <div className="max-w-2xl mx-auto px-4 pb-12">
+        <ComplianceDisclosure />
       </div>
     </div>
   );

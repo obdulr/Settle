@@ -18,6 +18,7 @@ import { StripeModule } from './stripe/stripe.module';
 import { AdminModule } from './admin/admin.module';
 import { MatchingModule } from './matching/matching.module';
 import { AiModule } from './ai/ai.module';
+import { CoachingModule } from './coaching/coaching.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { AiModule } from './ai/ai.module';
     AdminModule,
     MatchingModule,
     AiModule,
+    CoachingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import ComplianceDisclosure from '../../components/ComplianceDisclosure';
 
 const HOW_IT_WORKS_STEPS = [
   {
@@ -570,6 +571,11 @@ export default function ProvidersPage() {
             </div>
           </div>
         )}
+
+        {/* Compliance disclosures */}
+        <div className="mt-12">
+          <ComplianceDisclosure />
+        </div>
       </div>
     </div>
   );

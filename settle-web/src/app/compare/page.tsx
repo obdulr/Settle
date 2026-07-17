@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import ComplianceDisclosure from '../../components/ComplianceDisclosure';
 
 interface Provider {
   id: string;
@@ -412,6 +413,11 @@ function CompareContent() {
             </div>
           </>
         )}
+
+        {/* Compliance disclosures */}
+        <div className="mt-12">
+          <ComplianceDisclosure />
+        </div>
       </div>
     </div>
   );

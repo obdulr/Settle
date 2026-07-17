@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import ComplianceDisclosure from '../components/ComplianceDisclosure';
 
 export default function Home() {
   return (
@@ -495,6 +496,13 @@ export default function Home() {
             Not sure if you qualify?{' '}
             <Link href="/compare" className="text-blue-500 hover:underline font-medium">See how the marketplace works →</Link>
           </p>
+        </div>
+      </section>
+
+      {/* Compliance disclosures */}
+      <section className="py-12 px-4 bg-white dark:bg-black">
+        <div className="max-w-3xl mx-auto">
+          <ComplianceDisclosure />
         </div>
       </section>
     </div>
