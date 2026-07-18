@@ -202,6 +202,44 @@ export class EmailService {
     }
   }
 
+  async sendLeadMatchNotification(
+    provider: { companyName: string; email: string },
+    lead: { totalDebt: number; state: string; debtTypes?: string[] },
+    match: { id: string; matchScore: number },
+  ): Promise<boolean> {
+    const subject = 'New lead match on Settle In Peace';
+    const portalUrl = process.env.FRONTEND_URL || 'http://localhost:3025';
+    const leadUrl = `${portalUrl}/portal/leads`;
+    const html = this.renderLeadMatchTemplate(provider, lead, match, leadUrl);
+
+    if (!this.resend) {
+      this.logger.log(
+        `[DEV EMAIL] To: ${provider.email} | Subject: ${subject} | Match: ${match.id} | Score: ${match.matchScore}`,
+      );
+      return true;
+    }
+
+    try {
+      const { error } = await this.resend.emails.send({
+        from: this.fromEmail,
+        to: provider.email,
+        subject,
+        html,
+      });
+
+      if (error) {
+        this.logger.error(`Failed to send lead match notification: ${error.message}`);
+        return false;
+      }
+
+      this.logger.log(`Lead match notification sent to ${provider.email} for match ${match.id}`);
+      return true;
+    } catch (err) {
+      this.logger.error(`Email send error: ${err instanceof Error ? err.message : String(err)}`);
+      return false;
+    }
+  }
+
   private renderVerificationTemplate(verifyUrl: string, firstName?: string): string {
     return `
       <!DOCTYPE html>
@@ -337,6 +375,63 @@ export class EmailService {
         ${reason ? `<p style="color: #71717a; font-size: 16px; line-height: 1.6;"><strong>Reason:</strong> ${reason}</p>` : ''}
         <p style="color: #71717a; font-size: 16px; line-height: 1.6;">
           If you believe this was in error or would like to reapply in the future, please contact our team.
+        </p>
+        <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 32px 0;">
+        <p style="color: #a1a1aa; font-size: 12px;">Settle In Peace, Inc. — The debt relief marketplace that puts you in control.</p>
+      </body>
+      </html>
+    `;
+  }
+
+  private renderLeadMatchTemplate(
+    provider: { companyName: string; email: string },
+    lead: { totalDebt: number; state: string; debtTypes?: string[] },
+    match: { id: string; matchScore: number },
+    leadUrl: string,
+  ): string {
+    const debtTypes = lead.debtTypes?.length ? lead.debtTypes.join(', ') : 'Not specified';
+    const debtAmount = Number(lead.totalDebt || 0).toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    });
+    return `
+      <!DOCTYPE html>
+      <html>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px;">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <h1 style="color: #2563eb; font-size: 24px; margin: 0;">Settle<span style="color: #60a5fa;">InPeace</span></h1>
+        </div>
+        <h2 style="color: #18181b; font-size: 20px;">New lead match on Settle In Peace</h2>
+        <p style="color: #71717a; font-size: 16px; line-height: 1.6;">
+          Hi <strong>${provider.companyName}</strong>,
+        </p>
+        <p style="color: #71717a; font-size: 16px; line-height: 1.6;">
+          A new lead matched your provider profile. Here is a quick summary:
+        </p>
+        <table style="width: 100%; border-collapse: collapse; margin: 24px 0; color: #18181b;">
+          <tr style="border-bottom: 1px solid #e4e4e7;">
+            <td style="padding: 8px 0; font-weight: 600;">Total debt</td>
+            <td style="padding: 8px 0; text-align: right;">${debtAmount}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e4e4e7;">
+            <td style="padding: 8px 0; font-weight: 600;">State</td>
+            <td style="padding: 8px 0; text-align: right;">${lead.state || 'Not specified'}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e4e4e7;">
+            <td style="padding: 8px 0; font-weight: 600;">Debt types</td>
+            <td style="padding: 8px 0; text-align: right;">${debtTypes}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; font-weight: 600;">Estimated match score</td>
+            <td style="padding: 8px 0; text-align: right; font-weight: 700; color: #2563eb;">${match.matchScore}%</td>
+          </tr>
+        </table>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${leadUrl}" style="display: inline-block; background: #2563eb; color: white; text-decoration: none; font-weight: 700; padding: 14px 32px; border-radius: 8px;">View Lead in Portal</a>
+        </div>
+        <p style="color: #a1a1aa; font-size: 14px; line-height: 1.5;">
+          <strong>Note:</strong> You must purchase this lead to unlock full contact details. This lead is matched based on the criteria you provided and may be purchased by other providers if you do not act quickly.
         </p>
         <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 32px 0;">
         <p style="color: #a1a1aa; font-size: 12px;">Settle In Peace, Inc. — The debt relief marketplace that puts you in control.</p>

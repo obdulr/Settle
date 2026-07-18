@@ -55,6 +55,7 @@ export class AdminService {
     }
 
     provider.status = 'active';
+    provider.emailVerified = true;
     const saved = await this.providersRepository.save(provider);
 
     // Fire-and-forget email - don't block the response on email delivery.

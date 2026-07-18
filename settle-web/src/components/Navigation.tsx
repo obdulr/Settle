@@ -12,6 +12,7 @@ export default function Navigation() {
   // Public marketplace nav items (always visible)
   const publicItems = [
     { href: '/assessment', label: 'Free Assessment' },
+    { href: '/calculators', label: 'Calculators' },
     { href: '/compare', label: 'Compare Providers' },
     { href: '/providers', label: 'For Providers' },
   ];

@@ -32,6 +32,9 @@ export class Match {
   @Column({ type: 'timestamp', nullable: true })
   declinedAt?: Date;
 
+  @Column({ type: 'timestamp', nullable: true, name: 'email_sent_at' })
+  emailSentAt?: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

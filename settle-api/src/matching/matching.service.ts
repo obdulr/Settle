@@ -4,6 +4,7 @@ import { Repository, In, FindManyOptions } from 'typeorm';
 import { Match } from '../entities/match.entity';
 import { Lead } from '../entities/lead.entity';
 import { Provider } from '../entities/provider.entity';
+import { EmailService } from '../email/email.service';
 
 export interface ScoreResult {
   score: number;
@@ -52,6 +53,7 @@ export class MatchingService {
     private leadsRepository: Repository<Lead>,
     @InjectRepository(Provider)
     private providersRepository: Repository<Provider>,
+    private emailService: EmailService,
   ) {}
 
   /**
@@ -82,6 +84,29 @@ export class MatchingService {
       return 'standard';
     }
     return 'basic';
+  }
+
+  /**
+   * Send an email notification to a provider when a new high-quality match is created.
+   * Only sends once per match (tracked by emailSentAt).
+   */
+  private async maybeNotifyProvider(match: Match, provider: Provider, lead: Lead): Promise<void> {
+    if (match.emailSentAt) return;
+    if (match.matchScore < 70) return;
+    if (!provider.emailVerified) return;
+    if (provider.status !== 'active' && provider.status !== 'approved') return;
+
+    try {
+      const sent = await this.emailService.sendLeadMatchNotification(provider, lead, match);
+      if (sent) {
+        match.emailSentAt = new Date();
+        await this.matchesRepository.save(match);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to send lead match notification for match ${match.id}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /**
@@ -229,6 +254,7 @@ export class MatchingService {
           status: 'suggested',
         });
         match = await this.matchesRepository.save(match);
+        await this.maybeNotifyProvider(match, provider, lead);
       }
       matches.push(match);
     }
@@ -270,6 +296,7 @@ export class MatchingService {
           status: 'suggested',
         });
         match = await this.matchesRepository.save(match);
+        await this.maybeNotifyProvider(match, provider, lead);
       }
       matches.push(match);
     }
