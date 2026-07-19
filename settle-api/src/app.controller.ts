@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { AppService } from './app.service';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
@@ -15,6 +16,7 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  @SkipThrottle()
   @Get('health')
   async getHealth(): Promise<object> {
     const dbStatus = await this.checkDatabase();

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   createBudget,
+  createCoachingCheckoutSession,
   createGoal,
   deleteBudget,
   deleteGoal,
@@ -17,6 +18,7 @@ import {
   updateGoalProgress,
 } from '../../lib/api';
 import { isAuthenticated } from '../../lib/authUtils';
+import { getToken } from '../../lib/auth';
 
 const currency = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -71,6 +73,25 @@ export default function CoachingPage() {
     }
     void loadDashboard();
   }, [router]);
+
+  const subscribeToCoaching = async () => {
+    const token = getToken();
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError('');
+      const session = await createCoachingCheckoutSession(token, window.location.origin);
+      if (!session.url) throw new Error('Stripe Checkout did not return a redirect URL.');
+      window.location.assign(session.url);
+    } catch (checkoutError) {
+      setError(checkoutError instanceof Error ? checkoutError.message : 'Unable to start coaching checkout.');
+      setSubmitting(false);
+    }
+  };
 
   const resetBudgetForm = () => {
     setBudgetIncome('');
@@ -227,6 +248,20 @@ export default function CoachingPage() {
         </header>
 
         {error && <div role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">{error}</div>}
+
+        {(dashboard?.subscription.status ?? 'inactive') !== 'active' && (
+          <section className={`${cardClass} mb-8 border-blue-200 dark:border-blue-800`} aria-label="Coaching subscription">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-zinc-950 dark:text-white">Monthly Coaching Subscription</h2>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Get ongoing guidance, budgeting tools, and goal tracking for $49/month.</p>
+              </div>
+              <button type="button" disabled={submitting} onClick={() => void subscribeToCoaching()} className="rounded-lg bg-blue-600 px-5 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+                {submitting ? 'Redirecting...' : 'Subscribe to Coaching'}
+              </button>
+            </div>
+          </section>
+        )}
 
         <section aria-label="Coaching overview" className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {[

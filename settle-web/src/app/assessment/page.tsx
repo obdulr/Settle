@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ComplianceDisclosure from '../../components/ComplianceDisclosure';
+import { submitAssessment } from '@/lib/api';
 
 const STEPS = [
   { id: 'debt_amount', label: 'Debt Amount', icon: '$' },
@@ -71,6 +72,7 @@ export default function AssessmentPage() {
   const [direction, setDirection] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [leadId, setLeadId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const [form, setForm] = useState({
@@ -128,17 +130,16 @@ export default function AssessmentPage() {
     setSubmitting(true);
     setError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025'}/leads/assessment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          totalDebt: parseFloat(form.totalDebt),
-          monthsBehind: parseInt(form.monthsBehind) || 0,
-          monthlyIncome: parseFloat(form.monthlyIncome) || 0,
-        }),
+      const response = await submitAssessment({
+        ...form,
+        totalDebt: parseFloat(form.totalDebt),
+        monthsBehind: parseInt(form.monthsBehind) || 0,
+        monthlyIncome: parseFloat(form.monthlyIncome) || 0,
       });
-      if (!res.ok) throw new Error('Submission failed');
+      const returnedLeadId = String(response.id ?? (response.lead as { id?: string } | undefined)?.id ?? '');
+      if (!returnedLeadId) throw new Error('Assessment was submitted but no lead ID was returned.');
+      localStorage.setItem('last_assessment_lead_id', returnedLeadId);
+      setLeadId(returnedLeadId);
       setSubmitted(true);
     } catch {
       setError('Something went wrong. Please try again.');
@@ -162,10 +163,10 @@ export default function AssessmentPage() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => router.push('/compare')}
+              onClick={() => leadId && router.push(`/compare?leadId=${encodeURIComponent(leadId)}`)}
               className="block w-full py-3 px-6 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 text-lg"
             >
-              See My Provider Matches →
+              See Your Provider Matches →
             </button>
             <button
               onClick={() => router.push('/register')}

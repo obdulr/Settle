@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -29,14 +29,31 @@ export class AuthService {
     // Check regular users first
     const user = await this.usersRepository.findOne({ where: { email } });
     if (user && user.password) {
+      if (user.lockoutExpiresAt && user.lockoutExpiresAt > new Date()) {
+        throw new ForbiddenException('Account is temporarily locked. Please try again in 15 minutes.');
+      }
+      if (user.accountLocked || user.failedLoginAttempts || user.lockoutExpiresAt) {
+        await this.usersRepository.update(user.id, {
+          accountLocked: false,
+          failedLoginAttempts: 0,
+          lockoutExpiresAt: null,
+        });
+      }
+
       try {
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (isPasswordValid) {
+          await this.usersRepository.update(user.id, {
+            accountLocked: false,
+            failedLoginAttempts: 0,
+            lockoutExpiresAt: null,
+          });
           const { password: _, ...result } = user;
           return result;
         }
+        await this.recordFailedLogin(user);
       } catch {
-        // Password hash invalid, fall through to provider check
+        await this.recordFailedLogin(user);
       }
     }
 
@@ -126,6 +143,12 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto) {
+    if (!this.isPasswordComplex(registerDto.password)) {
+      throw new BadRequestException(
+        'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.',
+      );
+    }
+
     const existingUser = await this.usersRepository.findOne({ 
       where: { email: registerDto.email } 
     });
@@ -247,6 +270,22 @@ export class AuthService {
     });
 
     return { success: true, message: 'Password reset successfully' };
+  }
+
+  private async recordFailedLogin(user: User): Promise<void> {
+    const failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+    const accountLocked = failedLoginAttempts >= 5;
+    const lockoutExpiresAt = accountLocked ? new Date(Date.now() + 15 * 60 * 1000) : null;
+    await this.usersRepository.update(user.id, {
+      failedLoginAttempts,
+      lastFailedLoginAt: new Date(),
+      accountLocked,
+      lockoutExpiresAt,
+    });
+  }
+
+  private isPasswordComplex(password: string): boolean {
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
   }
 
   private generateSecureToken(): string {

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { getStoredToken } from '@/lib/authUtils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025';
 
@@ -14,7 +15,7 @@ function BillingSuccessContent() {
 
   useEffect(() => {
     // Refresh stats so the new credit balance shows up
-    const token = localStorage.getItem('token');
+    const token = getStoredToken();
     if (!token) return;
     fetch(`${API_URL}/providers/portal/stats`, { headers: { Authorization: `Bearer ${token}` } })
       .then(() => setRefreshed(true))

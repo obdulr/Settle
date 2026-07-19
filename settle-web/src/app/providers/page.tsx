@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import ComplianceDisclosure from '../../components/ComplianceDisclosure';
+import { signupAsProvider } from '@/lib/api';
 
 const HOW_IT_WORKS_STEPS = [
   {
@@ -149,11 +150,15 @@ export default function ProvidersPage() {
   const [selectedPlan, setSelectedPlan] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
+    name: '',
     companyName: '',
     email: '',
     password: '',
     phone: '',
+    state: '',
+    services: '',
     website: '',
     description: '',
     minDebtAmount: '7500',
@@ -173,26 +178,36 @@ export default function ProvidersPage() {
     setFormStep('signup');
   };
 
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!form.name.trim()) errors.name = 'Your name is required.';
+    if (!form.companyName.trim()) errors.companyName = 'Company name is required.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Enter a valid email address.';
+    if (form.phone.replace(/\D/g, '').length < 10) errors.phone = 'Enter a phone number with at least 10 digits.';
+    if (!form.state) errors.state = 'Select the state where you operate.';
+    if (!form.services.trim()) errors.services = 'Describe the services you offer.';
+    return errors;
+  };
+
+  const formIsValid = Object.keys(validateForm()).length === 0;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors = validateForm();
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     setSubmitting(true);
     setError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025'}/providers/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          subscriptionType: selectedPlan,
-          minDebtAmount: parseFloat(form.minDebtAmount),
-          feePercentage: form.feePercentage ? parseFloat(form.feePercentage) : undefined,
-          yearsInBusiness: form.yearsInBusiness ? parseInt(form.yearsInBusiness) : undefined,
-        }),
+      await signupAsProvider({
+        ...form,
+        serviceTypes: form.services.split(',').map(service => service.trim()).filter(Boolean),
+        statesServed: [form.state],
+        subscriptionType: selectedPlan,
+        minDebtAmount: parseFloat(form.minDebtAmount),
+        feePercentage: form.feePercentage ? parseFloat(form.feePercentage) : undefined,
+        yearsInBusiness: form.yearsInBusiness ? parseInt(form.yearsInBusiness) : undefined,
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Signup failed');
-      }
       setFormStep('success');
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.');
@@ -460,14 +475,21 @@ export default function ProvidersPage() {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Your Name *</label>
+                  <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} aria-invalid={!!formErrors.name} className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                  {formErrors.name && <p className="mt-1 text-sm text-red-600">{formErrors.name}</p>}
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Company Name *</label>
                   <input
                     type="text" required value={form.companyName}
                     onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))}
+                    aria-invalid={!!formErrors.companyName}
                     className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   />
+                  {formErrors.companyName && <p className="mt-1 text-sm text-red-600">{formErrors.companyName}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -475,16 +497,20 @@ export default function ProvidersPage() {
                     <input
                       type="email" required value={form.email}
                       onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                      aria-invalid={!!formErrors.email}
                       className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                     />
+                    {formErrors.email && <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Phone *</label>
                     <input
                       type="tel" required value={form.phone}
                       onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                      aria-invalid={!!formErrors.phone}
                       className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                     />
+                    {formErrors.phone && <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>}
                   </div>
                 </div>
                 <div>
@@ -496,6 +522,14 @@ export default function ProvidersPage() {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Primary State *</label>
+                    <select value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value }))} aria-invalid={!!formErrors.state} className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                      <option value="">Select state...</option>
+                      {['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'].map(state => <option key={state} value={state}>{state}</option>)}
+                    </select>
+                    {formErrors.state && <p className="mt-1 text-sm text-red-600">{formErrors.state}</p>}
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Website</label>
                     <input
@@ -543,6 +577,11 @@ export default function ProvidersPage() {
                   </div>
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Services *</label>
+                  <input type="text" value={form.services} onChange={e => setForm(f => ({ ...f, services: e.target.value }))} aria-invalid={!!formErrors.services} placeholder="e.g. debt_settlement, debt_consolidation" className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                  {formErrors.services && <p className="mt-1 text-sm text-red-600">{formErrors.services}</p>}
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Company Description</label>
                   <textarea
                     rows={3} value={form.description}
@@ -562,7 +601,7 @@ export default function ProvidersPage() {
                 </div>
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || !formIsValid}
                   className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50"
                 >
                   {submitting ? 'Submitting...' : 'Submit Application →'}

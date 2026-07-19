@@ -19,7 +19,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "migration:run": "ts-node src/migrations/run-migration.ts",
-    "seed:providers": "ts-node src/scripts/seed-providers.ts"
+    "seed:providers": "ts-node src/scripts/seed-providers.ts",
+    "seed:admin": "ts-node src/scripts/create-admin.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

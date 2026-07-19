@@ -1,11 +1,11 @@
 // Authentication utilities following Prime pattern
 
-const TOKEN_KEY = 'settle_auth_token';
+import { clearToken, getToken, setToken } from './auth';
+
 const USER_KEY = 'settle_user_data';
 
 export function getStoredToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
+  return getToken();
 }
 
 export function getStoredUser(): any {
@@ -21,13 +21,13 @@ export function getStoredUser(): any {
 
 export function storeAuth(token: string, user: any) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(TOKEN_KEY, token);
+  setToken(token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function clearAuth() {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem(TOKEN_KEY);
+  clearToken();
   localStorage.removeItem(USER_KEY);
 }
 

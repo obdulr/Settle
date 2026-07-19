@@ -10,6 +10,9 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from './admin.guard';
 import { AdminService } from './admin.service';
+import { AdjustProviderCreditsDto } from './dto/adjust-provider-credits.dto';
+import { ManualAssignLeadDto } from './dto/manual-assign-lead.dto';
+import { RejectProviderDto } from './dto/reject-provider.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -36,8 +39,8 @@ export class AdminController {
 
   /** Reject a provider — sets status to 'rejected' and sends rejection email. */
   @Post('providers/:id/reject')
-  async rejectProvider(@Param('id') id: string, @Body('reason') reason?: string) {
-    return this.adminService.rejectProvider(id, reason);
+  async rejectProvider(@Param('id') id: string, @Body() body: RejectProviderDto) {
+    return this.adminService.rejectProvider(id, body.reason);
   }
 
   /** Suspend a provider — sets status to 'suspended'. */
@@ -50,7 +53,7 @@ export class AdminController {
   @Post('providers/:id/adjust-credits')
   async adjustProviderCredits(
     @Param('id') id: string,
-    @Body() body: { amount: number; reason?: string },
+    @Body() body: AdjustProviderCreditsDto,
   ) {
     return this.adminService.adjustProviderCredits(id, body.amount, body.reason);
   }
@@ -77,7 +80,7 @@ export class AdminController {
   @Post('leads/:id/manual-assign')
   async manualAssignLead(
     @Param('id') id: string,
-    @Body() body: { providerId: string; price?: number },
+    @Body() body: ManualAssignLeadDto,
   ) {
     return this.adminService.manualAssignLead(id, body.providerId, body.price);
   }

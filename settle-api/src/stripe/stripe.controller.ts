@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, Req, Headers, UseGuards, BadRequestException } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { StripeService, CREDIT_PACKAGES } from './stripe.service';
@@ -23,9 +23,20 @@ export class StripeController {
     return { url: session.url, sessionId: session.id };
   }
 
+  @Post('coaching/checkout')
+  @UseGuards(JwtAuthGuard)
+  async createCoachingCheckout(@Req() req: Request & { user: any }, @Body('returnUrl') returnUrl: string) {
+    if (!returnUrl) {
+      throw new BadRequestException('returnUrl is required');
+    }
+    return this.stripeService.createCoachingCheckoutSession(req.user, returnUrl);
+  }
+
   @Post('webhook')
-  async handleWebhook(@Req() req: Request & { rawBody?: Buffer }) {
-    const signature = req.headers['stripe-signature'] as string;
+  async handleWebhook(
+    @Req() req: Request & { rawBody?: Buffer },
+    @Headers('stripe-signature') signature: string,
+  ) {
     if (!signature) {
       throw new BadRequestException('Missing stripe-signature header');
     }
@@ -35,7 +46,8 @@ export class StripeController {
       throw new BadRequestException('Raw body not available for signature verification');
     }
 
-    await this.stripeService.handleWebhook(signature, rawBody);
+    const event = this.stripeService.verifyWebhookSignature(rawBody, signature);
+    await this.stripeService.handleWebhookEvent(event);
     return { received: true };
   }
 }

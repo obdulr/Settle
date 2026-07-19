@@ -1,5 +1,5 @@
 import { Controller, Post, Body, UseGuards, Request, Get, UsePipes, ValidationPipe, Put } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -28,6 +28,7 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getProfile(@Request() req) {
@@ -61,6 +62,7 @@ export class AuthController {
     return this.authService.resendVerificationEmail(body.email);
   }
 
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @UsePipes(new ValidationPipe())
   @Put('profile')

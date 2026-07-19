@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { User } from './entities/user.entity';
@@ -9,6 +11,10 @@ import { Debt } from './entities/debt.entity';
 import { Provider } from './entities/provider.entity';
 import { Lead } from './entities/lead.entity';
 import { Match } from './entities/match.entity';
+import { Budget } from './entities/budget.entity';
+import { BudgetItem } from './entities/budget-item.entity';
+import { Goal } from './entities/goal.entity';
+import { CoachingSubscription } from './entities/coaching-subscription.entity';
 import { AuthModule } from './auth/auth.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { DebtsModule } from './debts/debts.module';
@@ -23,6 +29,10 @@ import { CoachingModule } from './coaching/coaching.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 30,
+    }]),
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
@@ -33,14 +43,14 @@ import { CoachingModule } from './coaching/coaching.module';
         idleTimeoutMillis: 30000,
         keepAlive: true,
       },
-      entities: [User, Activity, Debt, Provider, Lead, Match],
+      entities: [User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription],
       synchronize: process.env.NODE_ENV !== 'production' || process.env.DB_SYNC === 'true',
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
       retryAttempts: 5,
       retryDelay: 3000,
     }),
-    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead, Match]),
+    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription]),
     AuthModule,
     ActivitiesModule,
     DebtsModule,
@@ -53,6 +63,12 @@ import { CoachingModule } from './coaching/coaching.module';
     CoachingModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

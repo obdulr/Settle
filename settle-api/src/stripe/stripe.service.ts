@@ -7,6 +7,7 @@ import { ProvidersService } from '../providers/providers.service';
 import { Provider } from '../entities/provider.entity';
 import { Lead } from '../entities/lead.entity';
 import { User } from '../entities/user.entity';
+import { CoachingSubscription } from '../entities/coaching-subscription.entity';
 
 export interface CreditPackage {
   credits: number;
@@ -36,7 +37,7 @@ export const PROVIDER_SUBSCRIPTION_TIERS: ProviderSubscriptionTier[] = [
 ];
 
 export const COACHING_SUBSCRIPTION_PRICE_MONTHLY = 49;
-const COACHING_PRICE_ENV_VAR = 'STRIPE_PRICE_COACHING';
+const COACHING_PRICE_ENV_VAR = 'STRIPE_COACHING_PRICE_ID';
 
 @Injectable()
 export class StripeService {
@@ -52,6 +53,8 @@ export class StripeService {
     private usersRepository: Repository<User>,
     @InjectRepository(Provider)
     private providersRepository: Repository<Provider>,
+    @InjectRepository(CoachingSubscription)
+    private coachingSubscriptionsRepository: Repository<CoachingSubscription>,
   ) {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     this.stripe = new Stripe(secretKey || 'sk_test_dummy', {
@@ -227,7 +230,7 @@ export class StripeService {
   // Coaching subscription — $49/month consumer coaching
   // ---------------------------------------------------------------------------
 
-  async createCoachingSubscriptionSession(userId: string): Promise<Stripe.Checkout.Session> {
+  async createCoachingCheckoutSession(user: User, returnUrl: string): Promise<Stripe.Checkout.Session> {
     const priceId = this.configService.get<string>(COACHING_PRICE_ENV_VAR);
     if (!priceId) {
       throw new BadRequestException(
@@ -235,31 +238,34 @@ export class StripeService {
       );
     }
 
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-    const customerId = await this.ensureUserCustomer(user);
+    const userId = user.id;
+    if (!userId) throw new BadRequestException('Authenticated user ID is required');
 
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3025';
-
-    const session = await this.stripe.checkout.sessions.create({
+    return this.stripe.checkout.sessions.create({
       mode: 'subscription',
-      customer: customerId,
+      customer_email: user.email,
       line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${returnUrl}/portal/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${returnUrl}/portal/billing/cancel`,
       metadata: {
-        type: 'coaching_subscription',
         userId,
+        type: 'coaching_subscription',
       },
       subscription_data: {
         metadata: {
-          type: 'coaching_subscription',
           userId,
+          type: 'coaching_subscription',
         },
       },
-      success_url: `${frontendUrl}/coaching/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${frontendUrl}/coaching`,
     });
+  }
 
-    return session;
+  // Kept for callers that use the original server-derived return URL flow.
+  async createCoachingSubscriptionSession(userId: string): Promise<Stripe.Checkout.Session> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3025';
+    return this.createCoachingCheckoutSession(user, frontendUrl);
   }
 
   // ---------------------------------------------------------------------------
@@ -301,19 +307,22 @@ export class StripeService {
   // Webhook handling
   // ---------------------------------------------------------------------------
 
-  async handleWebhook(signature: string, rawBody: Buffer): Promise<void> {
+  verifyWebhookSignature(payload: Buffer, signature: string): Stripe.Event {
     const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
-
-    let event: Stripe.Event;
+    const stripe = new Stripe(this.configService.get<string>('STRIPE_SECRET_KEY') || 'sk_test_dummy', {
+      apiVersion: '2026-06-24.dahlia',
+    });
 
     try {
-      event = this.stripe.webhooks.constructEvent(rawBody, signature, webhookSecret || '');
+      return stripe.webhooks.constructEvent(payload, signature, webhookSecret || '');
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`Webhook signature verification failed: ${message}`);
-      throw new BadRequestException(`Webhook signature verification failed`);
+      throw new BadRequestException('Webhook signature verification failed');
     }
+  }
 
+  async handleWebhookEvent(event: Stripe.Event): Promise<void> {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -392,13 +401,25 @@ export class StripeService {
 
       case 'coaching_subscription': {
         const userId = session.metadata?.userId;
-        if (userId) {
-          await this.usersRepository.update(userId, {
-            stripeSubscriptionId: session.subscription as string,
-            coachingSubscriptionStatus: 'active',
-          });
-          this.logger.log(`User ${userId} subscribed to coaching`);
+        const subscriptionId = typeof session.subscription === 'string' ? session.subscription : undefined;
+        if (!userId || !subscriptionId) {
+          this.logger.warn(`coaching_subscription checkout missing metadata: ${JSON.stringify(session.metadata)}`);
+          break;
         }
+
+        const subscription = await this.stripe.subscriptions.retrieve(subscriptionId) as Stripe.Subscription;
+        const status = subscription.status;
+        const currentPeriodEnd = (subscription as any).current_period_end
+          ? new Date((subscription as any).current_period_end * 1000)
+          : undefined;
+        await this.usersRepository.update(userId, {
+          stripeSubscriptionId: subscriptionId,
+          coachingSubscriptionStatus: status,
+          coachingCurrentPeriodEnd: currentPeriodEnd,
+          coachingCancelAtPeriodEnd: (subscription as any).cancel_at_period_end ?? false,
+        });
+        await this.upsertCoachingSubscription(userId, subscriptionId, status, new Date());
+        this.logger.log(`User ${userId} subscribed to coaching`);
         break;
       }
 
@@ -440,6 +461,7 @@ export class StripeService {
           : undefined,
         coachingCancelAtPeriodEnd: (subscription as any).cancel_at_period_end,
       });
+      await this.upsertCoachingSubscription(userId, subscription.id, subscription.status);
       this.logger.log(`User ${userId} coaching subscription updated: ${subscription.status}`);
       return;
     }
@@ -474,11 +496,31 @@ export class StripeService {
         coachingCurrentPeriodEnd: undefined,
         coachingCancelAtPeriodEnd: false,
       });
+      await this.upsertCoachingSubscription(userId, subscription.id, 'canceled', undefined, new Date());
       this.logger.log(`User ${userId} coaching subscription canceled`);
       return;
     }
 
     this.logger.log(`subscription.deleted with no recognized type metadata: ${subscription.id}`);
+  }
+
+  private async upsertCoachingSubscription(
+    userId: string,
+    stripeSubscriptionId: string,
+    status: string,
+    startedAt?: Date,
+    canceledAt?: Date,
+  ): Promise<void> {
+    const existing = await this.coachingSubscriptionsRepository.findOne({
+      where: { stripeSubscriptionId },
+    });
+    const subscription = existing || this.coachingSubscriptionsRepository.create({ userId, stripeSubscriptionId });
+    subscription.userId = userId;
+    subscription.stripeSubscriptionId = stripeSubscriptionId;
+    subscription.status = status;
+    if (startedAt && !subscription.startedAt) subscription.startedAt = startedAt;
+    if (canceledAt) subscription.canceledAt = canceledAt;
+    await this.coachingSubscriptionsRepository.save(subscription);
   }
 
   // ---------------------------------------------------------------------------

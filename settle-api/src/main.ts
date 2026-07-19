@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { ValidationPipe } from '@nestjs/common';
 import { json, raw } from 'express';
 
 async function bootstrap() {
@@ -11,12 +12,12 @@ async function bootstrap() {
 
   // Raw body parser for Stripe webhook route (signature verification requires the raw body)
   app.use(
-    '/stripe/webhook',
+    ['/stripe/webhook', '/api/v1/stripe/webhook'],
     raw({ type: '*/*', limit: '2mb' }),
   );
   // JSON body parser for all other routes
   app.use((req, res, next) => {
-    if (req.url === '/stripe/webhook') {
+    if (req.url === '/stripe/webhook' || req.url === '/api/v1/stripe/webhook') {
       // Preserve rawBody for signature verification
       req.rawBody = req.body;
       next();
@@ -24,6 +25,8 @@ async function bootstrap() {
       json({ limit: '2mb' })(req, res, next);
     }
   });
+
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   // Enable CORS with credentials support for the frontend
   const allowedOrigins = [

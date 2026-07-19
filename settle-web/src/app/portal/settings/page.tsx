@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getStoredToken, getStoredUser } from '@/lib/authUtils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025';
 
@@ -14,14 +15,14 @@ export default function PortalSettingsPage() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    const token = getStoredToken();
+    const storedUser = getStoredUser();
     if (!token || !storedUser) {
       router.push('/login');
       return;
     }
-    setUser(JSON.parse(storedUser));
-    fetch(`${API_URL}/providers/${JSON.parse(storedUser).sub || JSON.parse(storedUser).id}`, {
+    setUser(storedUser);
+    fetch(`${API_URL}/providers/${storedUser.sub || storedUser.id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
@@ -31,7 +32,7 @@ export default function PortalSettingsPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
+    const token = getStoredToken();
     if (!token) return;
     setSaving(true);
     setSaved(false);

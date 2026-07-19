@@ -3,7 +3,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { WebAuthnService } from './webauthn.service';
@@ -15,7 +14,6 @@ import { User } from '../entities/user.entity';
 import { Provider } from '../entities/provider.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
-import { ThrottlerGuard } from './guards/throttle.guard';
 import { ActivitiesModule } from '../activities/activities.module';
 import { EmailModule } from '../email/email.module';
 
@@ -25,10 +23,6 @@ import { EmailModule } from '../email/email.module';
     PassportModule,
     ActivitiesModule,
     EmailModule,
-    ThrottlerModule.forRoot([{
-      ttl: 60000, // 1 minute
-      limit: 10, // 10 requests per minute
-    }]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -41,7 +35,7 @@ import { EmailModule } from '../email/email.module';
     }),
   ],
   controllers: [AuthController, WebAuthnController, SmsAuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy, ThrottlerGuard, WebAuthnService, TelnyxService, SmsAuthService],
+  providers: [AuthService, JwtStrategy, LocalStrategy, WebAuthnService, TelnyxService, SmsAuthService],
   exports: [AuthService],
 })
 export class AuthModule {}

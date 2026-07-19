@@ -4,6 +4,8 @@ import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import ComplianceDisclosure from '../../components/ComplianceDisclosure';
+import { compareProviders } from '@/lib/api';
+import { getToken } from '@/lib/auth';
 
 interface Provider {
   id: string;
@@ -74,18 +76,12 @@ function CompareContent() {
     const fetchProviders = async () => {
       setLoading(true);
       try {
-        const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025';
-        let data: Provider[];
-        if (leadId) {
-          const res = await fetch(`${base}/matching/recommended/${leadId}`);
-          if (!res.ok) throw new Error('Failed to load matched providers');
-          data = await res.json();
-        } else {
-          const res = await fetch(`${base}/providers`);
-          if (!res.ok) throw new Error('Failed to load providers');
-          data = await res.json();
+        if (!leadId) {
+          setProviders([]);
+          return;
         }
-        setProviders(data);
+        const data = await compareProviders(leadId, getToken());
+        setProviders(Array.isArray(data) ? data as unknown as Provider[] : []);
       } catch {
         setProviders([]);
       } finally {
