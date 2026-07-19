@@ -21,6 +21,7 @@ export default function Navigation() {
   const authItems = authenticated
     ? [
         { href: '/dashboard', label: 'Dashboard' },
+        { href: '/coaching', label: 'Coaching' },
         { href: '/debts', label: 'My Debts' },
         { href: '/settings', label: 'Settings' },
       ]

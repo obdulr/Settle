@@ -1,32 +1,57 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
-import { API_BASE_URL, formatDate } from '@settle/shared';
+import { useState, useEffect } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AppNavigator from './src/navigation/AppNavigator';
+import { getToken, getProfile, getStoredUser, logout, User } from './src/services/auth';
+import { colors } from './src/theme/colors';
 
 export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function init() {
+      const token = await getToken();
+      if (token) {
+        try {
+          const profile = await getProfile(token);
+          setUser(profile);
+        } catch {
+          await logout();
+          setUser(null);
+        }
+      } else {
+        const stored = await getStoredUser();
+        if (stored) setUser(stored);
+      }
+      setLoading(false);
+    }
+    init();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Settle Mobile</Text>
-      <Text style={styles.text}>API URL: {API_BASE_URL}</Text>
-      <Text style={styles.text}>Date: {formatDate(new Date())}</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <AppNavigator user={user} setUser={setUser} />
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loading: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  text: {
-    fontSize: 16,
-    marginVertical: 5,
+    alignItems: 'center',
+    backgroundColor: colors.background,
   },
 });

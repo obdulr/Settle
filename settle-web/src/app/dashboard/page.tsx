@@ -179,10 +179,13 @@ export default function DashboardPage() {
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">Debt Settlement</span>
                 <span className="text-gray-400 dark:text-gray-500 font-medium">Coming Soon</span>
               </div>
-              <div className="flex items-center justify-between">
+              <a
+                href="/coaching"
+                className="flex items-center justify-between rounded-md -mx-2 px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              >
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">Financial Coaching</span>
-                <span className="text-gray-400 dark:text-gray-500 font-medium">Coming Soon</span>
-              </div>
+                <span className="text-blue-600 dark:text-blue-400 font-medium">Open Coaching</span>
+              </a>
             </div>
           </div>
         </div>
