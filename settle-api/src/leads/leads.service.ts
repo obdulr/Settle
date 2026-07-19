@@ -5,6 +5,7 @@ import { Lead } from '../entities/lead.entity';
 import { ProvidersService } from '../providers/providers.service';
 import { MatchingService } from '../matching/matching.service';
 import { LeadScoringService } from '../ai/lead-scoring.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class LeadsService {
@@ -16,6 +17,7 @@ export class LeadsService {
     private providersService: ProvidersService,
     private matchingService: MatchingService,
     private leadScoringService: LeadScoringService,
+    private emailService: EmailService,
   ) {}
 
   async submitAssessment(data: Partial<Lead>): Promise<Lead> {
@@ -119,6 +121,13 @@ export class LeadsService {
       salePrice: price,
       purchasedAt: new Date(),
     });
+
+    // Send lead purchase confirmation email to the provider
+    try {
+      await this.emailService.sendLeadPurchaseConfirmation(provider as any, lead, price);
+    } catch (err) {
+      this.logger.error(`Failed to send lead purchase confirmation: ${err instanceof Error ? err.message : String(err)}`);
+    }
 
     return this.leadsRepository.findOne({ where: { id: leadId } }) as Promise<Lead>;
   }

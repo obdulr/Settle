@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,6 +15,8 @@ import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
@@ -91,7 +93,7 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: '30d',
+      expiresIn: '1h',
       secret: process.env.JWT_SECRET,
     });
 
@@ -100,7 +102,7 @@ export class AuthService {
       secret: process.env.JWT_REFRESH_SECRET,
     });
 
-    return { accessToken, refreshToken, expiresIn: 30 * 24 * 60 * 60 }; // 30 days in seconds
+    return { accessToken, refreshToken, expiresIn: 60 * 60 }; // 1 hour in seconds
   }
 
   // Public method for passkey login (called from WebAuthnController)
@@ -140,6 +142,50 @@ export class AuthService {
         createdAt: user.createdAt,
       },
     };
+  }
+
+  async refreshToken(refreshToken: string) {
+    try {
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET,
+      });
+
+      // Look up the user to ensure they still exist and are valid
+      const user = await this.usersRepository.findOne({ where: { id: payload.sub } });
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      // Generate a new access token (1h)
+      const newAccessToken = this.jwtService.sign(
+        {
+          sub: user.id,
+          email: user.email,
+          role: user.role || 'customer',
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+        },
+        {
+          expiresIn: '1h',
+          secret: process.env.JWT_SECRET,
+        },
+      );
+
+      return {
+        success: true,
+        accessToken: newAccessToken,
+        expiresIn: 60 * 60, // 1 hour in seconds
+      };
+    } catch (err) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+  }
+
+  async logout() {
+    // Full invalidation requires a token store (e.g. Redis blacklist).
+    // For now, return success — the client should discard both tokens.
+    return { success: true, message: 'Logged out successfully' };
   }
 
   async register(registerDto: RegisterDto) {
@@ -268,6 +314,13 @@ export class AuthService {
       resetTokenExpires: null,
       lastPasswordChangeAt: new Date(),
     });
+
+    // Send password reset confirmation email (logged to console in dev mode)
+    try {
+      await this.emailService.sendPasswordResetConfirmation(user);
+    } catch (err) {
+      this.logger.error(`Failed to send password reset confirmation: ${err instanceof Error ? err.message : String(err)}`);
+    }
 
     return { success: true, message: 'Password reset successfully' };
   }

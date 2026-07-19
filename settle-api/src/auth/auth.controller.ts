@@ -21,6 +21,18 @@ export class AuthController {
     return this.authService.login(req.user);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 refreshes per minute
+  @Post('refresh')
+  async refreshToken(@Body() body: { refreshToken: string }) {
+    return this.authService.refreshToken(body.refreshToken);
+  }
+
+  @SkipThrottle()
+  @Post('logout')
+  async logout() {
+    return this.authService.logout();
+  }
+
   @UsePipes(new ValidationPipe())
   @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 requests per hour for registration
   @Post('register')

@@ -7,9 +7,10 @@ import { CoachingSubscription } from '../entities/coaching-subscription.entity';
 import { StripeService } from './stripe.service';
 import { StripeController } from './stripe.controller';
 import { ProvidersModule } from '../providers/providers.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Provider, Lead, User, CoachingSubscription]), ProvidersModule],
+  imports: [TypeOrmModule.forFeature([Provider, Lead, User, CoachingSubscription]), ProvidersModule, EmailModule],
   controllers: [StripeController],
   providers: [StripeService],
   exports: [StripeService],

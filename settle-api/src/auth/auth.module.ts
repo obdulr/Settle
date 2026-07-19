@@ -25,12 +25,18 @@ import { EmailModule } from '../email/email.module';
     EmailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get('JWT_SECRET') || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('JWT_SECRET must be set in production'); })() : 'dev-only-not-for-production-use'),
-        signOptions: {
-          expiresIn: '30d',
-        },
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const jwtSecret = configService.get<string>('JWT_SECRET');
+        if (!jwtSecret && process.env.NODE_ENV === 'production') {
+          throw new Error('JWT_SECRET must be set in production');
+        }
+        return {
+          secret: jwtSecret || 'dev-secret-not-for-production',
+          signOptions: {
+            expiresIn: '1h',
+          },
+        };
+      },
       inject: [ConfigService],
     }),
   ],

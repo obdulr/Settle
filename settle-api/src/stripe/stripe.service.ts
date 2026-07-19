@@ -8,6 +8,7 @@ import { Provider } from '../entities/provider.entity';
 import { Lead } from '../entities/lead.entity';
 import { User } from '../entities/user.entity';
 import { CoachingSubscription } from '../entities/coaching-subscription.entity';
+import { EmailService } from '../email/email.service';
 
 export interface CreditPackage {
   credits: number;
@@ -47,6 +48,7 @@ export class StripeService {
   constructor(
     private configService: ConfigService,
     private providersService: ProvidersService,
+    private emailService: EmailService,
     @InjectRepository(Lead)
     private leadsRepository: Repository<Lead>,
     @InjectRepository(User)
@@ -348,6 +350,12 @@ export class StripeService {
         break;
       }
 
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice;
+        await this.handleInvoicePaymentFailed(invoice);
+        break;
+      }
+
       default:
         this.logger.log(`Unhandled Stripe event type: ${event.type}`);
     }
@@ -420,6 +428,16 @@ export class StripeService {
         });
         await this.upsertCoachingSubscription(userId, subscriptionId, status, new Date());
         this.logger.log(`User ${userId} subscribed to coaching`);
+
+        // Send coaching welcome email
+        try {
+          const user = await this.usersRepository.findOne({ where: { id: userId } });
+          if (user) {
+            await this.emailService.sendCoachingWelcome(user);
+          }
+        } catch (err) {
+          this.logger.error(`Failed to send coaching welcome email: ${err instanceof Error ? err.message : String(err)}`);
+        }
         break;
       }
 
@@ -485,6 +503,16 @@ export class StripeService {
         isAcceptingLeads: false,
       });
       this.logger.log(`Provider ${providerId} subscription canceled`);
+
+      // Send cancellation email
+      try {
+        const provider = await this.providersRepository.findOne({ where: { id: providerId } });
+        if (provider) {
+          await this.emailService.sendSubscriptionCancelled(provider, 'provider_subscription');
+        }
+      } catch (err) {
+        this.logger.error(`Failed to send subscription cancelled email: ${err instanceof Error ? err.message : String(err)}`);
+      }
       return;
     }
 
@@ -498,10 +526,87 @@ export class StripeService {
       });
       await this.upsertCoachingSubscription(userId, subscription.id, 'canceled', undefined, new Date());
       this.logger.log(`User ${userId} coaching subscription canceled`);
+
+      // Send cancellation email
+      try {
+        const user = await this.usersRepository.findOne({ where: { id: userId } });
+        if (user) {
+          await this.emailService.sendSubscriptionCancelled(user, 'coaching');
+        }
+      } catch (err) {
+        this.logger.error(`Failed to send subscription cancelled email: ${err instanceof Error ? err.message : String(err)}`);
+      }
       return;
     }
 
     this.logger.log(`subscription.deleted with no recognized type metadata: ${subscription.id}`);
+  }
+
+  private async handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
+    const subscriptionId = typeof (invoice as any).subscription === 'string' ? (invoice as any).subscription : undefined;
+    const customerId = typeof invoice.customer === 'string' ? invoice.customer : undefined;
+    if (!subscriptionId) {
+      this.logger.warn(`invoice.payment_failed with no subscription id: ${invoice.id}`);
+      return;
+    }
+
+    let type: string | undefined;
+    let userId: string | undefined;
+    let providerId: string | undefined;
+
+    try {
+      const subscription = await this.stripe.subscriptions.retrieve(subscriptionId) as Stripe.Subscription;
+      type = subscription.metadata?.type;
+      userId = subscription.metadata?.userId;
+      providerId = subscription.metadata?.providerId;
+    } catch (err) {
+      this.logger.error(`Failed to retrieve subscription ${subscriptionId} for payment failure: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    const amount = (invoice as any).amount_due ? (invoice as any).amount_due / 100 : undefined;
+
+    if (type === 'coaching_subscription' && userId) {
+      try {
+        const user = await this.usersRepository.findOne({ where: { id: userId } });
+        if (user) {
+          await this.emailService.sendPaymentFailed(user, 'coaching', amount);
+        }
+      } catch (err) {
+        this.logger.error(`Failed to send payment failed email: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      return;
+    }
+
+    if (type === 'provider_subscription' && providerId) {
+      try {
+        const provider = await this.providersRepository.findOne({ where: { id: providerId } });
+        if (provider) {
+          await this.emailService.sendPaymentFailed(provider, 'provider_subscription', amount);
+        }
+      } catch (err) {
+        this.logger.error(`Failed to send payment failed email: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      return;
+    }
+
+    // Fallback: try to resolve by Stripe customer id when metadata is missing
+    if (customerId && !userId && !providerId) {
+      try {
+        const user = await this.usersRepository.findOne({ where: { stripeCustomerId: customerId } });
+        if (user) {
+          await this.emailService.sendPaymentFailed(user, 'coaching', amount);
+          return;
+        }
+        const provider = await this.providersRepository.findOne({ where: { stripeCustomerId: customerId } });
+        if (provider) {
+          await this.emailService.sendPaymentFailed(provider, 'provider_subscription', amount);
+        }
+      } catch (err) {
+        this.logger.error(`Failed to send payment failed email (fallback): ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    this.logger.warn(`invoice.payment_failed with no recognized type metadata: ${invoice.id}`);
   }
 
   private async upsertCoachingSubscription(
@@ -558,6 +663,16 @@ export class StripeService {
       expiresAt,
     });
     this.logger.log(`Lead ${leadId} sold to provider ${providerId} for $${salePrice}`);
+
+    // Send lead purchase confirmation email to the provider
+    try {
+      const provider = await this.providersRepository.findOne({ where: { id: providerId } });
+      if (provider) {
+        await this.emailService.sendLeadPurchaseConfirmation(provider, lead, salePrice);
+      }
+    } catch (err) {
+      this.logger.error(`Failed to send lead purchase confirmation: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   private calculateLeadPrice(lead: Lead): number {
