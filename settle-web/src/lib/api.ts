@@ -99,10 +99,28 @@ export function createCheckoutSession(token: string, packageType: number) {
 }
 
 export async function createCoachingCheckoutSession(token: string, returnUrl: string) {
-  return authenticatedApi(token)<{ url: string; id: string }>('/stripe/coaching/checkout', {
+  return authenticatedApi(token)<{ url: string; sessionId: string }>('/stripe/coaching/checkout', {
     method: 'POST',
     body: JSON.stringify({ returnUrl }),
   });
+}
+
+export function createLeadCheckoutSession(token: string, leadId: string) {
+  return authenticatedApi(token)<{ url: string; sessionId: string }>('/stripe/lead-checkout', {
+    method: 'POST',
+    body: JSON.stringify({ leadId }),
+  });
+}
+
+export function createProviderSubscriptionSession(token: string, tierId: string) {
+  return authenticatedApi(token)<{ url: string; sessionId: string }>('/stripe/provider-subscription', {
+    method: 'POST',
+    body: JSON.stringify({ tierId }),
+  });
+}
+
+export function createBillingPortalSession(token: string) {
+  return authenticatedApi(token)<{ url: string }>('/stripe/billing-portal', { method: 'POST' });
 }
 
 // Matching
