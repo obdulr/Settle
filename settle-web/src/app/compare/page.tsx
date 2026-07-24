@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import ComplianceDisclosure from '../../components/ComplianceDisclosure';
-import { compareProviders } from '@/lib/api';
+import { compareProviders, getProviders } from '@/lib/api';
 import { getToken } from '@/lib/auth';
 
 interface Provider {
@@ -76,12 +76,13 @@ function CompareContent() {
     const fetchProviders = async () => {
       setLoading(true);
       try {
-        if (!leadId) {
-          setProviders([]);
-          return;
+        if (leadId) {
+          const data = await compareProviders(leadId, getToken());
+          setProviders(Array.isArray(data) ? (data as unknown as Provider[]) : []);
+        } else {
+          const data = await getProviders(getToken() ?? undefined);
+          setProviders(Array.isArray(data) ? (data as unknown as Provider[]) : []);
         }
-        const data = await compareProviders(leadId, getToken());
-        setProviders(Array.isArray(data) ? data as unknown as Provider[] : []);
       } catch {
         setProviders([]);
       } finally {
@@ -172,54 +173,22 @@ function CompareContent() {
             <h2 className="text-2xl font-bold text-black dark:text-white mb-3">
               Our provider network is being built
             </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto mb-8">
-              We're currently onboarding vetted debt relief providers. In the meantime, you can take the free assessment — we'll notify you as soon as providers are available to match with your profile.
+            <p className="text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto mb-2">
+              We're currently onboarding vetted debt relief providers. We'll notify you as soon as providers are available to match with your profile.
+            </p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto mb-8">
+              <Link href="/assessment" className="text-blue-600 dark:text-blue-400 underline hover:text-blue-700">
+                Take the free assessment
+              </Link>{' '}
+              to be first in line.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href="/assessment"
-                className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all"
-              >
-                Take the Free Assessment →
-              </Link>
-              <Link
-                href="/providers"
-                className="px-8 py-3 border-2 border-blue-600 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950 transition-all"
-              >
-                I'm a Provider — Join the Network
-              </Link>
-            </div>
-
-            {/* What you'll see when providers join */}
-            <div className="mt-12 text-left">
-              <h3 className="text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-4 text-center">
-                Here's what the comparison will look like once providers join:
-              </h3>
-              <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl overflow-hidden border border-zinc-100 dark:border-zinc-800">
-                <div className="bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 text-xs font-semibold text-center py-2">
-                  Illustrative example — not real data
-                </div>
-                <div className="grid grid-cols-4 bg-blue-600 text-white text-sm font-semibold">
-                  <div className="p-4">Provider</div>
-                  <div className="p-4 text-center">Fee</div>
-                  <div className="p-4 text-center">Avg. Savings</div>
-                  <div className="p-4 text-center">Timeline</div>
-                </div>
-                {[
-                  { name: 'Provider A', fee: '15%', savings: '50%', timeline: '24 mo' },
-                  { name: 'Provider B', fee: '18%', savings: '45%', timeline: '22 mo' },
-                  { name: 'Provider C', fee: '20%', savings: '38%', timeline: '26 mo' },
-                ].map(p => (
-                  <div key={p.name} className="grid grid-cols-4 border-t border-zinc-100 dark:border-zinc-800 text-sm">
-                    <div className="p-4 font-semibold text-black dark:text-white">{p.name}</div>
-                    <div className="p-4 text-center font-bold text-blue-600 dark:text-blue-400">{p.fee}</div>
-                    <div className="p-4 text-center font-bold text-green-600 dark:text-green-400">{p.savings}</div>
-                    <div className="p-4 text-center text-zinc-600 dark:text-zinc-400">{p.timeline}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <Link
+              href="/providers"
+              className="inline-block px-8 py-3 border-2 border-blue-600 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950 transition-all"
+            >
+              I'm a Provider — Join the Network
+            </Link>
           </div>
         )}
 

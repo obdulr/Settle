@@ -210,45 +210,22 @@ export default function Home() {
           <div className="text-center mb-12">
             <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wide mb-3">The marketplace advantage</p>
             <h2 className="text-3xl sm:text-4xl font-black text-black dark:text-white mb-4">
-              See what providers would charge you — before you talk to anyone
+              Compare real providers side by side
             </h2>
             <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto">
-              Here's a preview of what the comparison will look like once our provider network is live.
+              Once our first vetted providers are live, you'll see transparent fees, verified ratings, and real timelines all in one place.
             </p>
           </div>
 
-          {/* Sample comparison table — clearly labeled as illustrative */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-            <div className="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs font-semibold text-center py-2">
-              Illustrative example — real comparisons will appear once providers join the network
-            </div>
-            <div className="grid grid-cols-4 bg-blue-600 text-white text-sm font-semibold">
-              <div className="p-4">Provider</div>
-              <div className="p-4 text-center">Fee</div>
-              <div className="p-4 text-center">Avg. Savings</div>
-              <div className="p-4 text-center">Timeline</div>
-            </div>
-            {[
-              { name: 'Provider A', fee: '15%', savings: '50%', timeline: '24 mo' },
-              { name: 'Provider B', fee: '18%', savings: '45%', timeline: '22 mo' },
-              { name: 'Provider C', fee: '20%', savings: '38%', timeline: '26 mo' },
-            ].map(p => (
-              <div key={p.name} className="grid grid-cols-4 border-t border-zinc-100 dark:border-zinc-800 text-sm">
-                <div className="p-4 font-semibold text-black dark:text-white">{p.name}</div>
-                <div className="p-4 text-center font-bold text-blue-600 dark:text-blue-400">{p.fee}</div>
-                <div className="p-4 text-center font-bold text-green-600 dark:text-green-400">{p.savings}</div>
-                <div className="p-4 text-center text-zinc-600 dark:text-zinc-400">{p.timeline}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center mt-8">
-            <Link
-              href="/compare"
-              className="inline-block px-8 py-3 border-2 border-blue-600 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950 transition-all"
-            >
-              See the Marketplace Page →
-            </Link>
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-100 dark:border-zinc-800 p-12 text-center max-w-3xl mx-auto">
+            <h3 className="text-xl font-bold text-black dark:text-white mb-3">Our provider network is being built</h3>
+            <p className="text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto">
+              We're onboarding vetted debt relief providers. Check the{' '}
+              <Link href="/compare" className="text-blue-600 dark:text-blue-400 underline hover:text-blue-700">
+                marketplace page
+              </Link>{' '}
+              for live comparisons as soon as they join.
+            </p>
           </div>
         </div>
       </section>
