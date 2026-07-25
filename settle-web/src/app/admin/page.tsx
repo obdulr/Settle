@@ -98,7 +98,7 @@ export default function AdminPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'providers' | 'leads' | 'matches'>('providers');
+  const [activeTab, setActiveTab] = useState<'providers' | 'leads' | 'matches' | 'transactions'>('providers');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -117,6 +117,11 @@ export default function AdminPage() {
   // Matches
   const [matches, setMatches] = useState<AdminMatch[]>([]);
   const [matchStats, setMatchStats] = useState<MatchStats | null>(null);
+
+  // Transactions (deposits)
+  const [deposits, setDeposits] = useState<any[]>([]);
+  const [depositFilter, setDepositFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [depositLoading, setDepositLoading] = useState(false);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -164,6 +169,72 @@ export default function AdminPage() {
       setError('Failed to load admin data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'transactions') {
+      fetchDeposits();
+    }
+  }, [activeTab, depositFilter]);
+
+  const fetchDeposits = async (status = depositFilter) => {
+    const token = getToken();
+    if (!token) return;
+    setDepositLoading(true);
+    try {
+      const query = status === 'all' ? '' : `?status=${status}`;
+      const res = await fetch(`${API_URL}/billing/admin/deposits${query}`, {
+        headers: authHeaders(token),
+      });
+      if (res.ok) setDeposits(await res.json());
+    } catch {
+      setError('Failed to load deposits');
+    } finally {
+      setDepositLoading(false);
+    }
+  };
+
+  const approveDeposit = async (id: string) => {
+    const token = getToken();
+    if (!token) return;
+    setActionLoading(`deposit-approve-${id}`);
+    setError('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch(`${API_URL}/billing/admin/deposits/${id}/approve`, {
+        method: 'POST',
+        headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error('Failed to approve deposit');
+      setSuccessMsg('Deposit approved and credited.');
+      await fetchDeposits();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const rejectDeposit = async (id: string) => {
+    const token = getToken();
+    if (!token) return;
+    setActionLoading(`deposit-reject-${id}`);
+    setError('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch(`${API_URL}/billing/admin/deposits/${id}/reject`, {
+        method: 'POST',
+        headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'Could not verify deposit' }),
+      });
+      if (!res.ok) throw new Error('Failed to reject deposit');
+      setSuccessMsg('Deposit rejected.');
+      await fetchDeposits();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -313,6 +384,7 @@ export default function AdminPage() {
             { id: 'providers' as const, label: `Providers (${providers.length})` },
             { id: 'leads' as const, label: `Leads (${leads.length})` },
             { id: 'matches' as const, label: `Matches (${matches.length})` },
+            { id: 'transactions' as const, label: `Transactions (${deposits.length})` },
           ].map(tab => (
             <button
               key={tab.id}
@@ -564,6 +636,81 @@ export default function AdminPage() {
                 </table>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Transactions tab */}
+        {activeTab === 'transactions' && (
+          <div className="space-y-8">
+            <div className="flex flex-wrap gap-2">
+              {(['all', 'pending', 'approved', 'rejected'] as const).map(status => (
+                <button
+                  key={status}
+                  onClick={() => setDepositFilter(status)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    depositFilter === status
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            {depositLoading ? (
+              <div className="text-center py-20 text-zinc-500">Loading transactions...</div>
+            ) : (
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-md border border-zinc-100 dark:border-zinc-800 overflow-hidden overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wide">
+                    <tr>
+                      <th className="text-left p-4">Provider</th>
+                      <th className="text-right p-4">Amount</th>
+                      <th className="text-left p-4">Method</th>
+                      <th className="text-left p-4">Reference</th>
+                      <th className="text-left p-4">Status</th>
+                      <th className="text-left p-4">Date</th>
+                      <th className="text-right p-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deposits.length === 0 ? (
+                      <tr><td colSpan={7} className="p-8 text-center text-zinc-500">No transactions found.</td></tr>
+                    ) : deposits.map(d => (
+                      <tr key={d.id} className="border-t border-zinc-100 dark:border-zinc-800">
+                        <td className="p-4 font-semibold text-black dark:text-white">{d.providerId ? d.providerId.slice(0, 8) : 'Unmatched'}</td>
+                        <td className="p-4 text-right font-bold text-black dark:text-white">${Number(d.amount).toLocaleString()}</td>
+                        <td className="p-4 text-zinc-600 dark:text-zinc-400">{d.method}</td>
+                        <td className="p-4 text-zinc-600 dark:text-zinc-400">{d.reference || '—'}</td>
+                        <td className="p-4"><StatusBadge status={d.status} /></td>
+                        <td className="p-4 text-zinc-500">{d.createdAt ? new Date(d.createdAt).toLocaleDateString() : '—'}</td>
+                        <td className="p-4 text-right">
+                          {d.status === 'pending' && (
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                onClick={() => approveDeposit(d.id)}
+                                disabled={actionLoading === `deposit-approve-${d.id}`}
+                                className="px-3 py-1.5 text-xs font-bold bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                              >
+                                {actionLoading === `deposit-approve-${d.id}` ? '...' : 'Approve'}
+                              </button>
+                              <button
+                                onClick={() => rejectDeposit(d.id)}
+                                disabled={actionLoading === `deposit-reject-${d.id}`}
+                                className="px-3 py-1.5 text-xs font-bold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                              >
+                                {actionLoading === `deposit-reject-${d.id}` ? '...' : 'Reject'}
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>

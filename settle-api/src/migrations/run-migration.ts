@@ -11,6 +11,7 @@ import { AddLeadQualityTier1700000000006 } from './1700000000006-AddLeadQualityT
 import { CreateCoachingEntities1700000000007 } from './1700000000007-CreateCoachingEntities';
 import { AddMatchEmailSentAtAndProviderEmailVerified1700000000008 } from './1700000000008-AddMatchEmailSentAtAndProviderEmailVerified';
 import { AddMissingUserColumns1700000000009 } from './1700000000009-AddMissingUserColumns';
+import { CreateDeposits1700000000010 } from './1700000000010-CreateDeposits';
 
 type MigrationConstructor = new () => MigrationInterface;
 
@@ -26,6 +27,7 @@ const migrations: MigrationConstructor[] = [
   CreateCoachingEntities1700000000007,
   AddMatchEmailSentAtAndProviderEmailVerified1700000000008,
   AddMissingUserColumns1700000000009,
+  CreateDeposits1700000000010,
 ];
 
 async function ensureMigrationsTable(queryRunner: QueryRunner): Promise<void> {

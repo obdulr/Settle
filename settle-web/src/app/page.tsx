@@ -33,7 +33,7 @@ export default function Home() {
               </h1>
 
               <p className="text-xl text-blue-100 mb-8 max-w-lg leading-relaxed">
-                We're building the first marketplace for debt relief — compare providers side-by-side with transparent fees, real timelines, and no pressure. Take the free assessment to get started.
+                We're building the first marketplace for debt relief. Take the free assessment to join early access — we'll match you with vetted providers as our network grows.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -44,10 +44,10 @@ export default function Home() {
                   Take the Free Assessment →
                 </Link>
                 <Link
-                  href="/compare"
+                  href="/providers"
                   className="px-8 py-4 bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white text-lg font-semibold rounded-xl hover:bg-white/20 transition-all"
                 >
-                  How the Marketplace Works
+                  Join as a Provider
                 </Link>
               </div>
 
@@ -62,7 +62,7 @@ export default function Home() {
             {/* Right: Mini qualification widget */}
             <div className="bg-white rounded-2xl shadow-2xl p-6 lg:p-8 text-zinc-900">
               <div className="text-center mb-5">
-                <h2 className="text-xl font-bold text-zinc-900">See your options in 60 seconds</h2>
+                <h2 className="text-xl font-bold text-zinc-900">Check your eligibility in 60 seconds</h2>
                 <p className="text-sm text-zinc-500 mt-1">Start with your total debt — no personal info needed yet</p>
               </div>
 
@@ -126,7 +126,7 @@ export default function Home() {
               {
                 icon: '⚖️',
                 title: 'True Side-by-Side Comparison',
-                desc: 'See multiple providers with transparent fees, average savings, timelines, and verified reviews — all in one place. No more calling 5 different companies.',
+                desc: 'Once providers join, see multiple offers with transparent fees, average savings, timelines, and verified reviews — all in one place. No more calling 5 different companies.',
                 badge: 'No one else does this',
               },
               {
@@ -169,9 +169,9 @@ export default function Home() {
           <div className="grid md:grid-cols-4 gap-6">
             {[
               { step: '1', icon: '📝', title: 'Take the assessment', desc: 'Answer 7 quick questions about your debt. No SSN, no credit check, no obligation.' },
-              { step: '2', icon: '🎯', title: 'Get matched', desc: 'We match your profile to vetted providers who can help with your specific situation.' },
-              { step: '3', icon: '⚖️', title: 'Compare offers', desc: 'See real fees, timelines, and savings side-by-side. Ask questions before committing.' },
-              { step: '4', icon: '🕊️', title: 'Choose your path', desc: "Enroll when you're ready, or use our coaching tools to handle it yourself." },
+              { step: '2', icon: '🎯', title: 'Get matched', desc: 'Once providers join, we match your profile to vetted providers for your specific situation.' },
+              { step: '3', icon: '⚖️', title: 'Compare offers', desc: 'Compare real fees, timelines, and savings side-by-side as providers come online.' },
+              { step: '4', icon: '🕊️', title: 'Choose your path', desc: "Enroll with a provider when ready, or use our coaching tools while you wait." },
             ].map((item, idx) => (
               <div key={item.step} className="relative text-center">
                 {idx < 3 && (

@@ -123,6 +123,40 @@ export function createBillingPortalSession(token: string) {
   return authenticatedApi(token)<{ url: string }>('/stripe/billing-portal', { method: 'POST' });
 }
 
+// Billing / deposits
+export function submitDeposit(token: string, data: { amount: number; method: string; reference?: string; notes?: string }) {
+  return authenticatedApi(token)<{ id: string; status: string }>('/billing/deposits', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function getMyDeposits(token: string, status?: string) {
+  const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+  return authenticatedApi(token)<any[]>(`/billing/deposits${qs}`, { method: 'GET' });
+}
+
+export function getAdminDeposits(token: string, status?: string) {
+  const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+  return authenticatedApi(token)<any[]>(`/billing/admin/deposits${qs}`, { method: 'GET' });
+}
+
+export function approveDeposit(token: string, id: string) {
+  return authenticatedApi(token)<{ id: string; status: string }>(`/billing/admin/deposits/${id}/approve`, { method: 'POST' });
+}
+
+export function rejectDeposit(token: string, id: string, reason?: string) {
+  return authenticatedApi(token)<{ id: string; status: string }>(`/billing/admin/deposits/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function manualDeposit(token: string, data: { providerId: string; amount: number; method: string; reference?: string; notes?: string }) {
+  return authenticatedApi(token)<any>('/billing/admin/deposits', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function runBillingRenewals(token: string) {
+  return authenticatedApi(token)<{ success: boolean }>('/billing/admin/run-renewals', { method: 'POST' });
+}
+
 // Matching
 export function getMatches(token: string) {
   return authenticatedApi(token)<ApiData[]>('/matching/history', { method: 'GET' });

@@ -25,6 +25,7 @@ import { AdminModule } from './admin/admin.module';
 import { MatchingModule } from './matching/matching.module';
 import { AiModule } from './ai/ai.module';
 import { CoachingModule } from './coaching/coaching.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { CoachingModule } from './coaching/coaching.module';
     MatchingModule,
     AiModule,
     CoachingModule,
+    BillingModule,
   ],
   controllers: [AppController],
   providers: [
