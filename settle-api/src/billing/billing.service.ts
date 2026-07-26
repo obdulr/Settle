@@ -48,17 +48,22 @@ export class BillingService implements OnModuleInit {
     }
   }
 
+  private isUuid(value: string) {
+    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+  }
+
   async processBankingWebhook(dto: BankingWebhookDto) {
     const reference = dto.reference.trim();
     let provider: Provider | null = null;
 
     // Try matching by DEP-<providerId> or plain provider id
-    if (reference.toUpperCase().startsWith('DEP-')) {
-      const id = reference.slice(4).trim();
-      provider = await this.providersRepository.findOne({ where: { id } });
-    }
-    if (!provider) {
-      provider = await this.providersRepository.findOne({ where: { id: reference } });
+    const possibleId = reference.toUpperCase().startsWith('DEP-') ? reference.slice(4).trim() : reference;
+    if (this.isUuid(possibleId)) {
+      try {
+        provider = await this.providersRepository.findOne({ where: { id: possibleId } });
+      } catch (err) {
+        this.logger.warn(`Provider lookup failed for reference ${reference}: ${err}`);
+      }
     }
 
     const deposit = this.depositsRepository.create({
@@ -68,7 +73,7 @@ export class BillingService implements OnModuleInit {
       reference,
       externalTransactionId: dto.externalTransactionId,
       status: provider ? 'approved' : 'pending',
-      approvedBy: provider ? 'system' : undefined,
+      approvedBy: undefined,
       notes: provider ? 'Auto-approved by banking webhook' : 'Could not match reference to a provider',
     });
 

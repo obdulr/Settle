@@ -65,7 +65,7 @@ export class StripeService {
       }
       this.logger.warn('STRIPE_SECRET_KEY is not set — Stripe calls will fail until it is configured.');
     }
-    this.stripe = new Stripe(secretKey || '', {
+    this.stripe = new Stripe(secretKey || 'sk_test_placeholder', {
       apiVersion: '2026-06-24.dahlia',
     });
   }
