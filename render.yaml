@@ -1,10 +1,68 @@
 services:
   - type: web
+    name: settle-api
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: corepack enable && corepack prepare pnpm@9.15.5 --activate && cd settle-api && pnpm install --frozen-lockfile && pnpm run build
+    startCommand: cd settle-api && pnpm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: PORT
+        value: "4025"
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: onboarding@settleinpeace.com
+      - key: SUPPORT_EMAIL
+        value: support@settleinpeace.com
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_COACHING_PRICE_ID
+        sync: false
+      - key: STRIPE_COACHING_PRODUCT_NAME
+        value: "Monthly Coaching Subscription"
+      - key: STRIPE_PRICE_PROVIDER_STARTER
+        sync: false
+      - key: STRIPE_PRICE_PROVIDER_GROWTH
+        sync: false
+      - key: STRIPE_PRICE_PROVIDER_SCALE
+        sync: false
+      - key: FRONTEND_URL
+        value: https://www.settleinpeace.com
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://www.settleinpeace.com
+      - key: CORS_ORIGINS
+        value: https://www.settleinpeace.com
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: TELNYX_API_KEY
+        sync: false
+      - key: TELNYX_FROM_NUMBER
+        sync: false
+      - key: TELNYX_MESSAGING_PROFILE_ID
+        sync: false
+      - key: AUTO_MATCH_THRESHOLD
+        value: "70"
+    autoDeploy: true
+
+  - type: web
     name: settle-web
     runtime: node
-    plan: standard
+    plan: starter
     region: oregon
-    buildCommand: corepack enable && corepack prepare pnpm@9.15.5 --activate && pnpm install --frozen-lockfile=false && cd packages/shared-sdk && pnpm run build || true && cd settle-web && pnpm run build
+    buildCommand: corepack enable && corepack prepare pnpm@9.15.5 --activate && pnpm install --frozen-lockfile && cd settle-web && pnpm run build
     startCommand: cd settle-web && pnpm run start
     envVars:
       - key: NODE_ENV
@@ -14,7 +72,7 @@ services:
       - key: NEXT_PUBLIC_API_URL
         value: https://api.settleinpeace.com
       - key: NEXT_PUBLIC_APP_URL
-        value: https://settleinpeace.com
+        value: https://www.settleinpeace.com
       - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
         sync: false
     autoDeploy: true
