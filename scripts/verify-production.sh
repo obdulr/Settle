@@ -15,14 +15,27 @@ echo "API:    $API_URL"
 echo "Web:    $FRONTEND_URL"
 echo ""
 
-# 1. API is up
+# 1. API is up (try common base paths)
 echo "[1/7] Checking API health..."
-HTTP_STATUS=$(curl -s -o /tmp/health.json -w "%{http_code}" "$API_URL/health" || true)
-if [ "$HTTP_STATUS" != "200" ]; then
-  echo "  FAIL: /health returned status $HTTP_STATUS"
+FOUND_HEALTH=0
+for path in /health /api/health /api/v1/health; do
+  HTTP_STATUS=$(curl -s -o /tmp/health.json -w "%{http_code}" "$API_URL$path" || true)
+  if [ "$HTTP_STATUS" = "200" ]; then
+    echo "  OK: $path returned 200"
+    FOUND_HEALTH=1
+    break
+  elif [ "$HTTP_STATUS" = "502" ]; then
+    echo "  FAIL: $path returned 502 (Render service not deployed / no active deploy)"
+  else
+    echo "  INFO: $path returned $HTTP_STATUS"
+  fi
+done
+
+if [ "$FOUND_HEALTH" != "1" ]; then
+  echo "  FAIL: Could not reach a healthy API endpoint at $API_URL"
+  echo "  HINT: If using Render, check that the service has an active deploy and the start command is 'cd settle-api && pnpm run start:prod'"
   exit 1
 fi
-echo "  OK: /health is 200"
 
 # 2. Key public pages are reachable
 echo "[2/7] Checking public pages..."
