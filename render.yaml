@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: settle-web
+    runtime: node
+    plan: standard
+    region: oregon
+    buildCommand: corepack enable && corepack prepare pnpm@9.15.5 --activate && pnpm install --frozen-lockfile=false && cd packages/shared-sdk && pnpm run build || true && cd settle-web && pnpm run build
+    startCommand: cd settle-web && pnpm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_PUBLIC_API_URL
+        value: https://api.settleinpeace.com
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://settleinpeace.com
+      - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+        sync: false
+    autoDeploy: true
