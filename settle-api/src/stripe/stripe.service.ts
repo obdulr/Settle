@@ -60,10 +60,7 @@ export class StripeService {
   ) {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (!secretKey) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error('STRIPE_SECRET_KEY must be set in production');
-      }
-      this.logger.warn('STRIPE_SECRET_KEY is not set — Stripe calls will fail until it is configured.');
+      this.logger.error('STRIPE_SECRET_KEY is not set — Stripe calls will fail until it is configured in environment variables.');
     }
     this.stripe = new Stripe(secretKey || 'sk_test_placeholder', {
       apiVersion: '2026-06-24.dahlia',
