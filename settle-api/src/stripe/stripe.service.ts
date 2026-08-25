@@ -217,6 +217,7 @@ export class StripeService {
         seats: tier.seats.toString(),
       },
       subscription_data: {
+        trial_period_days: 30,
         metadata: {
           type: 'provider_subscription',
           providerId,
@@ -257,6 +258,7 @@ export class StripeService {
         type: 'coaching_subscription',
       },
       subscription_data: {
+        trial_period_days: 30,
         metadata: {
           userId,
           type: 'coaching_subscription',

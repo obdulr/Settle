@@ -249,12 +249,12 @@ export default function CoachingPage() {
 
         {error && <div role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">{error}</div>}
 
-        {(dashboard?.subscription.status ?? 'inactive') !== 'active' && (
+        {!['active', 'trialing'].includes(dashboard?.subscription.status ?? 'inactive') && (
           <section className={`${cardClass} mb-8 border-blue-200 dark:border-blue-800`} aria-label="Coaching subscription">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-xl font-bold text-zinc-950 dark:text-white">Monthly Coaching Subscription</h2>
-                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Get ongoing guidance, budgeting tools, and goal tracking for $49/month.</p>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Get ongoing guidance, budgeting tools, and goal tracking for $19/month. Start with a 30-day free trial.</p>
               </div>
               <button type="button" disabled={submitting} onClick={() => void subscribeToCoaching()} className="rounded-lg bg-blue-600 px-5 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
                 {submitting ? 'Redirecting...' : 'Subscribe to Coaching'}
