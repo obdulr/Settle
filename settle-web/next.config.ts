@@ -9,6 +9,15 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
+  async redirects() {
+    return [
+      {
+        source: '/portal/leads',
+        destination: '/portal',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [{
       source: '/(.*)',
