@@ -15,6 +15,9 @@ import { Budget } from './entities/budget.entity';
 import { BudgetItem } from './entities/budget-item.entity';
 import { Goal } from './entities/goal.entity';
 import { CoachingSubscription } from './entities/coaching-subscription.entity';
+import { CrmLead } from './entities/crm-lead.entity';
+import { CrmDeal } from './entities/crm-deal.entity';
+import { CrmClient } from './entities/crm-client.entity';
 import { AuthModule } from './auth/auth.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { DebtsModule } from './debts/debts.module';
@@ -25,6 +28,7 @@ import { AdminModule } from './admin/admin.module';
 import { MatchingModule } from './matching/matching.module';
 import { AiModule } from './ai/ai.module';
 import { CoachingModule } from './coaching/coaching.module';
+import { CrmModule } from './crm/crm.module';
 import { BillingModule } from './billing/billing.module';
 
 @Module({
@@ -44,14 +48,14 @@ import { BillingModule } from './billing/billing.module';
         idleTimeoutMillis: 30000,
         keepAlive: true,
       },
-      entities: [User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription],
+      entities: [User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient],
       synchronize: process.env.NODE_ENV !== 'production' || process.env.DB_SYNC === 'true',
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
       retryAttempts: 5,
       retryDelay: 3000,
     }),
-    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription]),
+    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient]),
     AuthModule,
     ActivitiesModule,
     DebtsModule,
@@ -62,6 +66,7 @@ import { BillingModule } from './billing/billing.module';
     MatchingModule,
     AiModule,
     CoachingModule,
+    CrmModule,
     BillingModule,
   ],
   controllers: [AppController],
