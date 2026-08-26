@@ -14,9 +14,10 @@ import { CrmLeadStatus } from '../entities/crm-lead.entity';
 import type { CrmLeadSource } from '../entities/crm-lead.entity';
 import { CrmDealStage } from '../entities/crm-deal.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AdminGuard } from '../auth/guards/admin.guard';
 
 @Controller('crm')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AdminGuard)
 export class CrmController {
   constructor(private readonly crmService: CrmService) {}
 
