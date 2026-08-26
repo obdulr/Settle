@@ -46,8 +46,14 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      setError('Password must contain uppercase, lowercase, number, and special character');
       return;
     }
 
@@ -66,8 +72,8 @@ export default function RegisterPage() {
       } else {
         setError(response.error || 'Registration failed');
       }
-    } catch {
-      setError('Registration failed. Email may already be in use.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -87,7 +93,7 @@ export default function RegisterPage() {
 
     try {
       // Step 1: Create account with a random password (passkey-only account)
-      const tempPassword = crypto.randomUUID() + crypto.randomUUID();
+      const tempPassword = `${crypto.randomUUID()}!A1a`;
       const regRes = await apiCall<{ success: boolean; accessToken?: string; user?: any; error?: string }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ email, password: tempPassword, firstName, lastName }),
@@ -135,7 +141,7 @@ export default function RegisterPage() {
       if (err instanceof Error && err.name === 'NotAllowedError') {
         setError('Passkey registration was cancelled');
       } else {
-        setError('Registration failed. Email may already be in use.');
+        setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
       }
     } finally {
       setLoading(false);
