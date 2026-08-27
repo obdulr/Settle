@@ -61,7 +61,16 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await apiCall<{ success: boolean; accessToken?: string; user?: any; error?: string }>('/auth/register', {
+      const response = await apiCall<{
+        success: boolean;
+        accessToken?: string;
+        user?: any;
+        requiresVerification?: boolean;
+        email?: string;
+        devCode?: string;
+        message?: string;
+        error?: string;
+      }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ email, password, firstName, lastName }),
       });
@@ -70,6 +79,10 @@ export default function RegisterPage() {
         storeAuth(response.accessToken, response.user);
         setInfo('Account created! You can now add a passkey for faster login.');
         router.push('/dashboard');
+      } else if (response.success && response.requiresVerification && response.email) {
+        const query = new URLSearchParams({ mode: 'otp', email: response.email, sent: '1' });
+        if (response.devCode) query.set('devCode', response.devCode);
+        router.push(`/login?${query.toString()}`);
       } else {
         setError(response.error || 'Registration failed');
       }
@@ -99,13 +112,34 @@ export default function RegisterPage() {
     try {
       // Step 1: Create account with a random password (passkey-only account)
       const tempPassword = `${crypto.randomUUID()}!A1a`;
-      const regRes = await apiCall<{ success: boolean; accessToken?: string; user?: any; error?: string }>('/auth/register', {
+      const regRes = await apiCall<{
+        success: boolean;
+        accessToken?: string;
+        user?: any;
+        requiresVerification?: boolean;
+        email?: string;
+        devCode?: string;
+        message?: string;
+        error?: string;
+      }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ email, password: tempPassword, firstName, lastName }),
       });
 
-      if (!regRes.success || !regRes.accessToken) {
+      if (!regRes.success) {
         setError(regRes.error || 'Registration failed');
+        return;
+      }
+
+      if (regRes.requiresVerification && regRes.email) {
+        const query = new URLSearchParams({ mode: 'otp', email: regRes.email, sent: '1' });
+        if (regRes.devCode) query.set('devCode', regRes.devCode);
+        router.push(`/login?${query.toString()}`);
+        return;
+      }
+
+      if (!regRes.accessToken) {
+        setError('Registration failed');
         return;
       }
 

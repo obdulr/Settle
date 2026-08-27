@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { startAuthentication } from '@simplewebauthn/browser';
 import { createJsonApiClient } from '@settle/shared-sdk/auth';
@@ -29,6 +29,26 @@ export default function LoginPage() {
     return <LoadingSpinner />;
   }
 
+  // Prefill email/mode from query string (e.g. after registration)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const m = params.get('mode');
+    const e = params.get('email');
+    const sent = params.get('sent');
+    const devCode = params.get('devCode');
+    if (e) setEmail(e);
+    if (m === 'otp') {
+      setMode('otp');
+      if (sent === '1') {
+        setOtpSent(true);
+        setInfo(devCode
+          ? `Dev mode — your code is: ${devCode}`
+          : 'Check your email for a 6-digit verification code.'
+        );
+      }
+    }
+  }, []);
+
   const apiCall = createJsonApiClient({
     getBaseUrl: () => API_URL,
     getToken: () => null,
@@ -45,7 +65,16 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await apiCall<{ success: boolean; accessToken?: string; user?: any; error?: string }>('/auth/login', {
+      const response = await apiCall<{
+        success: boolean;
+        accessToken?: string;
+        user?: any;
+        requiresVerification?: boolean;
+        email?: string;
+        devCode?: string;
+        message?: string;
+        error?: string;
+      }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
@@ -53,6 +82,13 @@ export default function LoginPage() {
       if (response.success && response.accessToken) {
         storeAuth(response.accessToken, response.user);
         router.push(response.user?.role === 'provider' ? '/portal' : '/dashboard');
+      } else if (response.success && response.requiresVerification) {
+        setMode('otp');
+        setOtpSent(true);
+        setInfo(response.devCode
+          ? `Dev mode — your code is: ${response.devCode}`
+          : response.message || 'Check your email for a 6-digit verification code.'
+        );
       } else {
         setError(response.error || 'Login failed');
       }

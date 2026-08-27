@@ -111,6 +111,18 @@ export class AuthService {
   }
 
   async login(user: any) {
+    // Customers must verify their email with an OTP before receiving tokens
+    if (user.role !== 'provider' && !user.emailVerified) {
+      const otpResult = await this.sendEmailOtp(user.email);
+      return {
+        success: true,
+        requiresVerification: true,
+        email: user.email,
+        message: otpResult.message || 'Please verify your email with the code we sent.',
+        ...(otpResult.devCode ? { devCode: otpResult.devCode } : {}),
+      };
+    }
+
     const tokens = await this.generateTokens(user);
 
     // Log login activity (skip for providers — they don't have an activities table row)
@@ -214,8 +226,7 @@ export class AuthService {
       lastName: registerDto.lastName,
       phone: registerDto.phone,
       role: 'customer',
-      emailVerificationToken: verificationToken,
-      emailVerificationExpires: verificationExpires,
+      emailVerified: false,
     });
 
     await this.usersRepository.save(user);
@@ -228,25 +239,15 @@ export class AuthService {
       { email: user.email, firstName: user.firstName, lastName: user.lastName }
     );
 
-    // Send verification email (logged to console in dev mode when no RESEND_API_KEY)
-    await this.emailService.sendVerificationEmail(user.email, verificationToken, user.firstName);
+    // Send email OTP for verification (logged to console in dev mode when no RESEND_API_KEY)
+    const otpResult = await this.sendEmailOtp(user.email);
 
-    const tokens = await this.generateTokens(user);
-    
     return {
       success: true,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresIn: tokens.expiresIn,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role || 'customer',
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-        createdAt: user.createdAt,
-      },
+      requiresVerification: true,
+      email: user.email,
+      message: otpResult.message || 'Check your email for a verification code.',
+      ...(otpResult.devCode ? { devCode: otpResult.devCode } : {}),
     };
   }
 
