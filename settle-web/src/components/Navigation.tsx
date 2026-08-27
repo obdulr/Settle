@@ -1,59 +1,78 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { isAuthenticated, getStoredUser } from '../lib/authUtils';
+import { useRouter, usePathname } from 'next/navigation';
+import { isAuthenticated, getStoredUser, clearAuth } from '../lib/authUtils';
 
 export default function Navigation() {
   const pathname = usePathname();
+  const router = useRouter();
   const authenticated = isAuthenticated();
   const user = getStoredUser();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  // Public marketplace nav items (always visible)
-  const publicItems = [
-    { href: '/assessment', label: 'Free Assessment' },
-    { href: '/calculators', label: 'Calculators' },
-    { href: '/compare', label: 'Compare Providers' },
-    { href: '/providers', label: 'For Providers' },
-  ];
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  // Auth-gated items
-  const authItems = authenticated
+  // Close menu on route change
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
+
+  const handleLogout = () => {
+    clearAuth();
+    setMenuOpen(false);
+    router.push('/');
+  };
+
+  // Marketplace links — condensed when logged in
+  const marketplaceItems = authenticated
     ? [
-        { href: '/dashboard', label: 'Dashboard' },
-        { href: '/coaching', label: 'Coaching' },
-        { href: '/debts', label: 'My Debts' },
-        { href: '/settings', label: 'Settings' },
+        { href: '/assessment', label: 'Free Assessment' },
+        { href: '/compare', label: 'Compare Providers' },
       ]
     : [
-        { href: '/login', label: 'Login' },
-        { href: '/register', label: 'Register' },
+        { href: '/assessment', label: 'Free Assessment' },
+        { href: '/calculators', label: 'Calculators' },
+        { href: '/compare', label: 'Compare Providers' },
+        { href: '/providers', label: 'For Providers' },
       ];
 
-  // Role-gated items (provider portal + admin)
+  // Account menu items for dropdown
+  const accountItems = [
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/debts', label: 'My Debts' },
+    { href: '/coaching', label: 'Coaching' },
+    { href: '/settings', label: 'Settings' },
+  ];
+
+  // Role-gated items
   const roleItems: { href: string; label: string }[] = [];
   if (authenticated && user) {
-    if (user.role === 'provider') {
-      roleItems.push({ href: '/portal', label: 'Provider Portal' });
-    }
-    if (user.role === 'admin') {
-      roleItems.push({ href: '/admin', label: 'Admin' });
-    }
+    if (user.role === 'provider') roleItems.push({ href: '/portal', label: 'Provider Portal' });
+    if (user.role === 'admin') roleItems.push({ href: '/admin', label: 'Admin' });
   }
 
   const isActive = (href: string) => pathname === href;
 
   return (
-    <nav className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+    <nav className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          {/* Logo + public links */}
+          {/* Logo + marketplace links */}
           <div className="flex items-center">
             <Link href="/" className="text-xl font-bold text-black dark:text-white mr-8 flex-shrink-0">
               Settle<span className="text-blue-600">InPeace</span>
             </Link>
             <div className="hidden sm:flex sm:space-x-6">
-              {publicItems.map(item => (
+              {marketplaceItems.map(item => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -71,49 +90,116 @@ export default function Navigation() {
             </div>
           </div>
 
-          {/* Auth links + user info */}
+          {/* Right side: auth controls */}
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex sm:items-center sm:space-x-4">
-              {roleItems.map(item => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`text-sm font-medium transition-colors ${
-                    isActive(item.href)
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-              {authItems.map(item => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`text-sm font-medium transition-colors ${
-                    isActive(item.href)
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-            {/* CTA button */}
-            {!authenticated && (
-              <Link
-                href="/assessment"
-                className="hidden sm:inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Get Free Help →
-              </Link>
+            {/* Role-gated links (provider/admin) */}
+            {authenticated && roleItems.length > 0 && (
+              <div className="hidden sm:flex sm:items-center sm:space-x-4">
+                {roleItems.map(item => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`text-sm font-medium transition-colors ${
+                      isActive(item.href)
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
             )}
+
+            {/* Unauthenticated: Login + Register + CTA */}
+            {!authenticated && (
+              <div className="hidden sm:flex sm:items-center sm:space-x-4">
+                <Link href="/login" className="text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
+                  Login
+                </Link>
+                <Link href="/register" className="text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
+                  Register
+                </Link>
+                <Link
+                  href="/assessment"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Get Free Help →
+                </Link>
+              </div>
+            )}
+
+            {/* Authenticated: user dropdown */}
             {authenticated && user && (
-              <span className="text-sm text-zinc-500 dark:text-zinc-400 hidden sm:block">
-                {user.email}
-              </span>
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                    {(user.firstName?.[0] || user.email?.[0] || 'U').toUpperCase()}
+                  </div>
+                  <span className="text-sm text-zinc-600 dark:text-zinc-400 hidden sm:block max-w-[140px] truncate">
+                    {user.firstName || user.email}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 text-zinc-400 transition-transform ${menuOpen ? 'rotate-180' : ''}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-800 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-700 py-2 z-50">
+                    {/* User info header */}
+                    <div className="px-4 py-2 border-b border-zinc-100 dark:border-zinc-700 mb-1">
+                      <p className="text-sm font-medium text-zinc-900 dark:text-white truncate">{user.firstName} {user.lastName}</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{user.email}</p>
+                    </div>
+
+                    {/* Account links */}
+                    {accountItems.map(item => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`block px-4 py-2 text-sm transition-colors ${
+                          isActive(item.href)
+                            ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50'
+                            : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+
+                    {/* Role-gated links in dropdown */}
+                    {roleItems.map(item => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`block px-4 py-2 text-sm transition-colors ${
+                          isActive(item.href)
+                            ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50'
+                            : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+
+                    {/* Logout */}
+                    <div className="border-t border-zinc-100 dark:border-zinc-700 mt-1 pt-1">
+                      <button
+                        onClick={handleLogout}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

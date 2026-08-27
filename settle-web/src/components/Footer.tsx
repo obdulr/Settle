@@ -1,6 +1,18 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { isAuthenticated, clearAuth } from '../lib/authUtils';
 
 export default function Footer() {
+  const router = useRouter();
+  const authenticated = isAuthenticated();
+
+  const handleLogout = () => {
+    clearAuth();
+    router.push('/');
+  };
+
   return (
     <footer className="bg-black border-t border-zinc-900 mt-auto">
       <div className="max-w-6xl mx-auto px-4 py-12">
@@ -29,9 +41,20 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-semibold text-sm mb-4">Account</h3>
             <ul className="space-y-2 text-sm text-zinc-400">
-              <li><Link href="/login" className="hover:text-white transition-colors">Login</Link></li>
-              <li><Link href="/register" className="hover:text-white transition-colors">Sign Up</Link></li>
-              <li><Link href="/portal" className="hover:text-white transition-colors">Provider Portal</Link></li>
+              {authenticated ? (
+                <>
+                  <li><Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link></li>
+                  <li><Link href="/debts" className="hover:text-white transition-colors">My Debts</Link></li>
+                  <li><Link href="/settings" className="hover:text-white transition-colors">Settings</Link></li>
+                  <li><button onClick={handleLogout} className="hover:text-white transition-colors text-left">Logout</button></li>
+                </>
+              ) : (
+                <>
+                  <li><Link href="/login" className="hover:text-white transition-colors">Login</Link></li>
+                  <li><Link href="/register" className="hover:text-white transition-colors">Sign Up</Link></li>
+                  <li><Link href="/portal" className="hover:text-white transition-colors">Provider Portal</Link></li>
+                </>
+              )}
             </ul>
           </div>
           <div>
