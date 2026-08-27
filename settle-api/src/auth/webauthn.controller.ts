@@ -61,6 +61,13 @@ export class WebAuthnController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('status')
+  async passkeyStatus(@Request() req) {
+    const hasPasskey = await this.webauthnService.hasPasskey(req.user.sub);
+    return { hasPasskey };
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Delete()
   async deletePasskey(@Request() req) {
     return { success: await this.webauthnService.deletePasskey(req.user.sub) };

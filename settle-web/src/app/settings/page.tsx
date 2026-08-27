@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createJsonApiClient } from '@settle/shared-sdk/auth';
+import { startRegistration } from '@simplewebauthn/browser';
 import { getStoredToken, getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
 
 interface UserProfile {
@@ -31,6 +32,19 @@ export default function SettingsPage() {
   const [phoneVerifyInfo, setPhoneVerifyInfo] = useState('');
   const [phoneVerifyError, setPhoneVerifyError] = useState('');
   const [phoneVerifying, setPhoneVerifying] = useState(false);
+  const [hasPasskey, setHasPasskey] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [passkeyMessage, setPasskeyMessage] = useState('');
+
+  const checkPasskeyStatus = useCallback(async () => {
+    try {
+      const apiCall = getApiCall();
+      const res = await apiCall<{ hasPasskey: boolean }>('/auth/passkey/status');
+      setHasPasskey(res.hasPasskey);
+    } catch {
+      // Endpoint may not exist yet — silently ignore
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !isAuthenticated()) {
@@ -66,6 +80,7 @@ export default function SettingsPage() {
           lastName: response.lastName || '',
           phone: response.phone || '',
         });
+        checkPasskeyStatus();
       } catch (err) {
         setError('Failed to load profile');
       } finally {
@@ -131,6 +146,61 @@ export default function SettingsPage() {
       setPhoneVerifyError('Failed to send verification code');
     } finally {
       setPhoneVerifying(false);
+    }
+  };
+
+  const handleRegisterPasskey = async () => {
+    setPasskeyLoading(true);
+    setPasskeyMessage('');
+    try {
+      const apiCall = getApiCall();
+      const optionsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025'}/auth/passkey/register/options`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getStoredToken()}`,
+        },
+      });
+      const options = await optionsRes.json();
+      const credential = await startRegistration({ optionsJSON: options });
+      const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025'}/auth/passkey/register/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getStoredToken()}`,
+        },
+        body: JSON.stringify({ credential, challenge: options.challenge }),
+      });
+      const result = await verifyRes.json();
+      if (result.verified) {
+        setHasPasskey(true);
+        setPasskeyMessage('Passkey registered successfully! You can now use it to log in.');
+      } else {
+        setPasskeyMessage('Failed to register passkey. Please try again.');
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'NotAllowedError') {
+        setPasskeyMessage('Passkey registration was cancelled');
+      } else {
+        setPasskeyMessage(err instanceof Error ? err.message : 'Failed to register passkey');
+      }
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
+
+  const handleDeletePasskey = async () => {
+    setPasskeyLoading(true);
+    setPasskeyMessage('');
+    try {
+      const apiCall = getApiCall();
+      await apiCall<{ success: boolean }>('/auth/passkey', { method: 'DELETE' });
+      setHasPasskey(false);
+      setPasskeyMessage('Passkey removed.');
+    } catch {
+      setPasskeyMessage('Failed to remove passkey');
+    } finally {
+      setPasskeyLoading(false);
     }
   };
 
@@ -363,19 +433,48 @@ export default function SettingsPage() {
                   Change
                 </a>
               </div>
-              <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-md">
-                <div>
-                  <p className="font-medium text-black dark:text-white">Two-Factor Authentication</p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Add an extra layer of security to your account
-                  </p>
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-md">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="font-medium text-black dark:text-white">Passkey</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Use Touch ID, Face ID, or a security key for passwordless login
+                    </p>
+                  </div>
+                  {hasPasskey ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs font-medium rounded-full">
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                      Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 text-xs font-medium rounded-full">
+                      Not set up
+                    </span>
+                  )}
                 </div>
-                <button
-                  disabled
-                  className="px-4 py-2 bg-zinc-300 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-md text-sm"
-                >
-                  Coming Soon
-                </button>
+                <div className="flex gap-2 mt-3">
+                  {!hasPasskey && (
+                    <button
+                      onClick={handleRegisterPasskey}
+                      disabled={passkeyLoading}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm disabled:opacity-50"
+                    >
+                      {passkeyLoading ? 'Setting up...' : 'Add Passkey'}
+                    </button>
+                  )}
+                  {hasPasskey && (
+                    <button
+                      onClick={handleDeletePasskey}
+                      disabled={passkeyLoading}
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm disabled:opacity-50"
+                    >
+                      {passkeyLoading ? 'Removing...' : 'Remove Passkey'}
+                    </button>
+                  )}
+                </div>
+                {passkeyMessage && (
+                  <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{passkeyMessage}</p>
+                )}
               </div>
               <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-md">
                 <div>
