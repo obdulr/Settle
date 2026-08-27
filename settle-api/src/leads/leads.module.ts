@@ -7,6 +7,7 @@ import { ProvidersModule } from '../providers/providers.module';
 import { MatchingModule } from '../matching/matching.module';
 import { AiModule } from '../ai/ai.module';
 import { EmailModule } from '../email/email.module';
+import { CrmModule } from '../crm/crm.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { EmailModule } from '../email/email.module';
     MatchingModule,
     AiModule,
     EmailModule,
+    CrmModule,
   ],
   controllers: [LeadsController],
   providers: [LeadsService],

@@ -1,14 +1,17 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Provider } from '../entities/provider.entity';
+import { CrmService } from '../crm/crm.service';
 
 @Injectable()
 export class ProvidersService {
+  private readonly logger = new Logger(ProvidersService.name);
   constructor(
     @InjectRepository(Provider)
     private providersRepository: Repository<Provider>,
+    private crmService: CrmService,
   ) {}
 
   async createProvider(data: Partial<Provider> & { password: string }) {
@@ -19,6 +22,24 @@ export class ProvidersService {
     const provider = this.providersRepository.create({ ...data, password: hashed, status: 'pending' });
     const saved = await this.providersRepository.save(provider);
     const { password: _, ...result } = saved;
+
+    // Sync provider to CRM as a new client/prospect
+    try {
+      await this.crmService.createClient({
+        firstName: saved.companyName,
+        lastName: 'Provider',
+        email: saved.email,
+        phone: saved.phone,
+        company: saved.companyName,
+        source: 'provider_signup',
+        userId: 'system',
+        groupId: saved.id,
+        assignedTo: saved.id,
+      });
+    } catch (error) {
+      this.logger.error(`CRM sync failed for provider ${saved.id}: ${error}`);
+    }
+
     return result;
   }
 

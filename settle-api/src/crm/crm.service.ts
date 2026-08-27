@@ -42,6 +42,8 @@ export interface CreateCrmLeadInput {
   userId: string;
   groupId?: string;
   consumerLeadId?: string;
+  score?: number;
+  aiScore?: number;
 }
 
 export interface UpdateCrmLeadInput {
@@ -75,6 +77,21 @@ export interface CreateCrmDealInput {
   userId: string;
   groupId?: string;
   tags?: string[];
+  status?: CrmDealStatus;
+  wonDate?: Date;
+}
+
+export interface CreateCrmClientInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  jobTitle?: string;
+  source: string;
+  userId: string;
+  groupId?: string;
+  assignedTo?: string;
 }
 
 @Injectable()
@@ -105,6 +122,9 @@ export class CrmService {
       userId: input.userId,
       groupId: input.groupId,
       consumerLeadId: input.consumerLeadId,
+      score: input.score ?? 0,
+      aiScore: input.aiScore,
+      lastScoredAt: input.aiScore ? new Date() : undefined,
     });
     const saved = await this.leadRepository.save(lead);
     this.logger.log(`Created CRM lead ${saved.id} for user ${input.userId} (group=${input.groupId ?? 'platform'})`);
@@ -184,13 +204,14 @@ export class CrmService {
       stage: input.stage,
       value: input.value,
       currency: input.currency ?? 'USD',
-      probability: input.probability ?? 0,
+      probability: input.probability ?? (input.status === CrmDealStatus.WON ? 100 : 0),
       expectedCloseDate: input.expectedCloseDate,
       assignedTo: input.assignedTo,
       userId: input.userId,
       groupId: input.groupId,
       tags: input.tags ?? [],
-      status: CrmDealStatus.ACTIVE,
+      status: input.status ?? CrmDealStatus.ACTIVE,
+      wonDate: input.wonDate,
     });
     const saved = await this.dealRepository.save(deal);
     this.logger.log(`Created CRM deal ${saved.id} for user ${input.userId} (group=${input.groupId ?? 'platform'})`);
@@ -237,6 +258,32 @@ export class CrmService {
     if (userId) where.userId = userId;
     if (groupId) where.groupId = groupId;
     return this.clientRepository.find({ where, order: { createdAt: 'DESC' }, take: 200 });
+  }
+
+  async findClientByGroupId(groupId: string): Promise<CrmClient | null> {
+    return this.clientRepository.findOne({ where: { groupId } });
+  }
+
+  async createClient(input: CreateCrmClientInput): Promise<CrmClient> {
+    const client = this.clientRepository.create({
+      firstName: input.firstName,
+      lastName: input.lastName,
+      email: input.email,
+      phone: input.phone,
+      company: input.company,
+      jobTitle: input.jobTitle,
+      status: CrmClientStatus.LEAD,
+      lifecycleStage: CrmLifecycleStage.AWARENESS,
+      source: input.source,
+      tags: [],
+      totalValue: 0,
+      userId: input.userId,
+      groupId: input.groupId,
+      assignedTo: input.assignedTo,
+    });
+    const saved = await this.clientRepository.save(client);
+    this.logger.log(`Created CRM client ${saved.id} (group=${input.groupId ?? 'platform'})`);
+    return saved;
   }
 
   async promoteLeadToClient(leadId: string): Promise<CrmClient> {
