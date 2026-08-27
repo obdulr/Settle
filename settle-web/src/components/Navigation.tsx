@@ -8,8 +8,9 @@ import { isAuthenticated, getStoredUser, clearAuth } from '../lib/authUtils';
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const authenticated = isAuthenticated();
-  const user = getStoredUser();
+  const [mounted, setMounted] = useState(false);
+  const authenticated = mounted && isAuthenticated();
+  const user = mounted ? getStoredUser() : null;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -22,6 +23,9 @@ export default function Navigation() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Hydration: mark mounted after first client render
+  useEffect(() => { setMounted(true); }, []);
 
   // Close menu on route change
   useEffect(() => { setMenuOpen(false); }, [pathname]);

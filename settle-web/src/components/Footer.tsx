@@ -1,12 +1,16 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated, clearAuth } from '../lib/authUtils';
 
 export default function Footer() {
   const router = useRouter();
-  const authenticated = isAuthenticated();
+  const [mounted, setMounted] = useState(false);
+  const authenticated = mounted && isAuthenticated();
+
+  useEffect(() => { setMounted(true); }, []);
 
   const handleLogout = () => {
     clearAuth();
