@@ -12,6 +12,7 @@ import { CreateCoachingEntities1700000000007 } from './1700000000007-CreateCoach
 import { AddMatchEmailSentAtAndProviderEmailVerified1700000000008 } from './1700000000008-AddMatchEmailSentAtAndProviderEmailVerified';
 import { AddMissingUserColumns1700000000009 } from './1700000000009-AddMissingUserColumns';
 import { CreateDeposits1700000000010 } from './1700000000010-CreateDeposits';
+import { AddPhoneOtpColumns1700000000011 } from './1700000000011-AddPhoneOtpColumns';
 
 type MigrationConstructor = new () => MigrationInterface;
 
@@ -28,6 +29,7 @@ const migrations: MigrationConstructor[] = [
   AddMatchEmailSentAtAndProviderEmailVerified1700000000008,
   AddMissingUserColumns1700000000009,
   CreateDeposits1700000000010,
+  AddPhoneOtpColumns1700000000011,
 ];
 
 async function ensureMigrationsTable(queryRunner: QueryRunner): Promise<void> {
