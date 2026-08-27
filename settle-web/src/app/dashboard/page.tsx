@@ -143,7 +143,7 @@ export default function DashboardPage() {
                 Manage Debts
               </a>
               <a
-                href="/profile"
+                href="/settings"
                 className="block w-full py-2 px-4 bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-600 text-center"
               >
                 Edit Profile

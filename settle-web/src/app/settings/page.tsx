@@ -12,6 +12,8 @@ interface UserProfile {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
   createdAt?: string;
 }
 
@@ -22,6 +24,13 @@ export default function SettingsPage() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [activeTab, setActiveTab] = useState('profile');
+  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', phone: '' });
+  const [saving, setSaving] = useState(false);
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [phoneOtpCode, setPhoneOtpCode] = useState('');
+  const [phoneVerifyInfo, setPhoneVerifyInfo] = useState('');
+  const [phoneVerifyError, setPhoneVerifyError] = useState('');
+  const [phoneVerifying, setPhoneVerifying] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !isAuthenticated()) {
@@ -52,6 +61,11 @@ export default function SettingsPage() {
         });
 
         setUser(response);
+        setEditForm({
+          firstName: response.firstName || '',
+          lastName: response.lastName || '',
+          phone: response.phone || '',
+        });
       } catch (err) {
         setError('Failed to load profile');
       } finally {
@@ -65,6 +79,83 @@ export default function SettingsPage() {
   const handleLogout = () => {
     clearAuth();
     router.push('/');
+  };
+
+  const getApiCall = () => {
+    const token = getStoredToken();
+    return createJsonApiClient({
+      getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
+      getToken: () => token,
+      onUnauthorized: () => { clearAuth(); router.push('/login'); },
+    });
+  };
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    setSuccessMessage('');
+    try {
+      const apiCall = getApiCall();
+      const response = await apiCall<UserProfile>('/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(editForm),
+      });
+      setUser(response);
+      setSuccessMessage('Profile updated successfully');
+      setPhoneOtpSent(false);
+      setPhoneOtpCode('');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch {
+      setError('Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSendPhoneOtp = async () => {
+    setPhoneVerifying(true);
+    setPhoneVerifyError('');
+    setPhoneVerifyInfo('');
+    try {
+      const apiCall = getApiCall();
+      const res = await apiCall<{ success: boolean; message: string; devCode?: string }>('/auth/send-phone-otp', { method: 'POST' });
+      if (res.success) {
+        setPhoneOtpSent(true);
+        setPhoneVerifyInfo(res.devCode
+          ? `Dev mode — your code is: ${res.devCode}`
+          : res.message || 'Verification code sent to your phone.'
+        );
+      } else {
+        setPhoneVerifyError(res.message || 'Failed to send code');
+      }
+    } catch {
+      setPhoneVerifyError('Failed to send verification code');
+    } finally {
+      setPhoneVerifying(false);
+    }
+  };
+
+  const handleVerifyPhoneOtp = async () => {
+    setPhoneVerifying(true);
+    setPhoneVerifyError('');
+    try {
+      const apiCall = getApiCall();
+      const res = await apiCall<{ success: boolean; message: string }>('/auth/verify-phone-otp', {
+        method: 'POST',
+        body: JSON.stringify({ code: phoneOtpCode }),
+      });
+      if (res.success) {
+        setUser(prev => prev ? { ...prev, phoneVerified: true } : prev);
+        setPhoneOtpSent(false);
+        setPhoneOtpCode('');
+        setPhoneVerifyInfo(res.message || 'Phone number verified!');
+      } else {
+        setPhoneVerifyError(res.message || 'Invalid code');
+      }
+    } catch {
+      setPhoneVerifyError('Invalid or expired code');
+    } finally {
+      setPhoneVerifying(false);
+    }
   };
 
   if (loading) {
@@ -143,7 +234,8 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="text"
-                  defaultValue={user?.firstName || ''}
+                  value={editForm.firstName}
+                  onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
                   className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800 dark:text-white"
                 />
               </div>
@@ -153,7 +245,8 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="text"
-                  defaultValue={user?.lastName || ''}
+                  value={editForm.lastName}
+                  onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
                   className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800 dark:text-white"
                 />
               </div>
@@ -163,15 +256,89 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="tel"
-                  defaultValue={user?.phone || ''}
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                   className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800 dark:text-white"
                 />
+                {user?.phone && editForm.phone === user.phone && (
+                  <div className="mt-2 flex items-center gap-2">
+                    {user.phoneVerified ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs font-medium rounded-full">
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                        Verified
+                      </span>
+                    ) : (
+                      <>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs font-medium rounded-full">
+                          Unverified
+                        </span>
+                        {!phoneOtpSent && (
+                          <button
+                            onClick={handleSendPhoneOtp}
+                            disabled={phoneVerifying}
+                            className="text-sm text-blue-600 hover:underline disabled:opacity-50"
+                          >
+                            {phoneVerifying ? 'Sending...' : 'Verify phone number'}
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+                {user?.phone && editForm.phone !== user.phone && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Save changes to update your phone number. You&apos;ll need to verify it again.
+                  </p>
+                )}
+
+                {/* Phone OTP verification */}
+                {!phoneOtpSent ? null : (
+                  <div className="mt-3 space-y-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      value={phoneOtpCode}
+                      onChange={(e) => setPhoneOtpCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Enter 6-digit code"
+                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800 dark:text-white text-center text-lg tracking-widest font-bold"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleVerifyPhoneOtp}
+                        disabled={phoneVerifying || phoneOtpCode.length !== 6}
+                        className="flex-1 py-2 px-4 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {phoneVerifying ? 'Verifying...' : 'Verify'}
+                      </button>
+                      <button
+                        onClick={() => { setPhoneOtpSent(false); setPhoneOtpCode(''); setPhoneVerifyInfo(''); }}
+                        className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {phoneVerifyInfo && (
+                  <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded text-sm text-blue-700 dark:text-blue-300">
+                    {phoneVerifyInfo}
+                  </div>
+                )}
+                {phoneVerifyError && (
+                  <div className="mt-2 p-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-300">
+                    {phoneVerifyError}
+                  </div>
+                )}
               </div>
               <button
-                onClick={() => setSuccessMessage('Profile updated successfully')}
-                className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onClick={handleSaveProfile}
+                disabled={saving}
+                className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                Save Changes
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
