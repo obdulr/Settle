@@ -25,6 +25,7 @@ export default function RegisterPage() {
   const apiCall = createJsonApiClient({
     getBaseUrl: () => API_URL,
     getToken: () => null,
+    timeout: 0,
     onUnauthorized: () => {
       clearAuth();
       router.push('/login');
@@ -73,7 +74,11 @@ export default function RegisterPage() {
         setError(response.error || 'Registration failed');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      if (err instanceof Error && (err as any).name === 'AbortError') {
+        setError('Request was cancelled. This is often caused by a browser extension. Try disabling extensions or use an incognito window.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

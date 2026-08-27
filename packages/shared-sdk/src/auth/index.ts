@@ -54,17 +54,21 @@ export function createJsonApiClient(options: CreateJsonApiClientOptions) {
       ...(requestOptions.headers as Record<string, string> || {}),
     };
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    let controller: AbortController | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    if (timeout > 0) {
+      controller = new AbortController();
+      timeoutId = setTimeout(() => controller?.abort(), timeout);
+    }
 
     try {
       const response = await fetch(url, {
         ...requestOptions,
         headers,
-        signal: controller.signal,
+        ...(controller ? { signal: controller.signal } : {}),
       });
 
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
 
       if (response.status === 401 || response.status === 403) {
         if (options.onUnauthorized) {
@@ -80,7 +84,7 @@ export function createJsonApiClient(options: CreateJsonApiClientOptions) {
 
       return response.json() as Promise<T>;
     } catch (error) {
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       throw error;
     }
   };
