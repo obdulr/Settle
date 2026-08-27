@@ -12,6 +12,7 @@ import { VerifyEmailDto } from './dtos/verify-email.dto';
 import { UpdateProfileDto } from './dtos/update-profile.dto';
 import { ActivitiesService } from '../activities/activities.service';
 import { EmailService } from '../email/email.service';
+import { TelnyxService } from './telnyx.service';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +26,7 @@ export class AuthService {
     private jwtService: JwtService,
     private activitiesService: ActivitiesService,
     private emailService: EmailService,
+    private telnyxService: TelnyxService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -417,11 +419,15 @@ export class AuthService {
       }
     }
 
+    // Reset phone verification if phone number changed
+    const phoneChanged = updateProfileDto.phone && updateProfileDto.phone !== user.phone;
+
     await this.usersRepository.update(userId, {
       firstName: updateProfileDto.firstName,
       lastName: updateProfileDto.lastName,
       email: updateProfileDto.email,
       phone: updateProfileDto.phone,
+      ...(phoneChanged ? { phoneVerified: false } : {}),
     });
 
     // Log profile update activity
@@ -537,5 +543,89 @@ export class AuthService {
         createdAt: user.createdAt,
       },
     };
+  }
+
+  // ============================================================
+  // Phone (SMS) Verification
+  // ============================================================
+
+  async sendPhoneOtp(userId: string): Promise<{ success: boolean; message: string; devCode?: string }> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    if (!user.phone) {
+      throw new BadRequestException('No phone number on file. Please add a phone number first.');
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date();
+    expires.setMinutes(expires.getMinutes() + 10);
+
+    await this.usersRepository.update(userId, {
+      phoneOtpCode: code,
+      phoneOtpExpires: expires,
+      phoneOtpAttempts: 0,
+    });
+
+    const result = await this.telnyxService.sendOTP(user.phone, code);
+
+    if (!process.env.TELNYX_API_KEY || !process.env.TELNYX_PHONE_NUMBER) {
+      this.logger.log(`[DEV SMS] Phone OTP for ${user.phone}: ${code}`);
+      return { success: true, message: 'Verification code sent (dev mode)', devCode: code };
+    }
+
+    if (!result.success) {
+      return { success: false, message: result.error || 'Failed to send SMS', devCode: code };
+    }
+
+    return { success: true, message: 'Verification code sent to your phone' };
+  }
+
+  async verifyPhoneOtp(userId: string, code: string): Promise<{ success: boolean; message: string }> {
+    const user = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.phoneOtpCode')
+      .where('user.id = :userId', { userId })
+      .getOne();
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (!user.phoneOtpCode || !user.phoneOtpExpires) {
+      throw new BadRequestException('No verification code was sent. Please request a new code.');
+    }
+
+    if (user.phoneOtpExpires < new Date()) {
+      throw new BadRequestException('Verification code has expired. Please request a new code.');
+    }
+
+    if ((user.phoneOtpAttempts || 0) >= 5) {
+      throw new BadRequestException('Too many attempts. Please request a new code.');
+    }
+
+    if (user.phoneOtpCode !== code) {
+      await this.usersRepository.update(userId, {
+        phoneOtpAttempts: (user.phoneOtpAttempts || 0) + 1,
+      });
+      throw new UnauthorizedException('Invalid verification code');
+    }
+
+    await this.usersRepository.update(userId, {
+      phoneOtpCode: null,
+      phoneOtpExpires: null,
+      phoneOtpAttempts: 0,
+      phoneVerified: true,
+    });
+
+    await this.activitiesService.createActivity(
+      userId,
+      'phone_verified',
+      'User verified phone number',
+      { phone: user.phone },
+    );
+
+    return { success: true, message: 'Phone number verified' };
   }
 }

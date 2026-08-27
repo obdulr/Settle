@@ -97,4 +97,22 @@ export class AuthController {
   async verifyEmailOtp(@Body() body: { email: string; code: string }) {
     return this.authService.verifyEmailOtp(body.email, body.code);
   }
+
+  // ============================================================
+  // Phone (SMS) Verification
+  // ============================================================
+
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 per minute
+  @Post('send-phone-otp')
+  async sendPhoneOtp(@Request() req) {
+    return this.authService.sendPhoneOtp(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 per minute
+  @Post('verify-phone-otp')
+  async verifyPhoneOtp(@Request() req, @Body() body: { code: string }) {
+    return this.authService.verifyPhoneOtp(req.user.sub, body.code);
+  }
 }

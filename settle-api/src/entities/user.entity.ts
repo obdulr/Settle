@@ -38,6 +38,15 @@ export class User {
   @Column({ name: 'phone_verified', type: 'boolean', default: false, nullable: true })
   phoneVerified?: boolean;
 
+  @Column({ name: 'phone_otp_code', length: 10, nullable: true, select: false })
+  phoneOtpCode?: string;
+
+  @Column({ name: 'phone_otp_expires', type: 'timestamp', nullable: true })
+  phoneOtpExpires?: Date;
+
+  @Column({ name: 'phone_otp_attempts', type: 'int', default: 0, nullable: true })
+  phoneOtpAttempts?: number;
+
   // Passkey / WebAuthn fields
   @Column({ name: 'passkey_credential_id', nullable: true })
   passkeyCredentialId?: string;
