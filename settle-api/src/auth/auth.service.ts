@@ -460,13 +460,13 @@ export class AuthService {
 
     const sent = await this.emailService.sendOtpEmail(email, code, user.firstName);
 
-    // In dev mode (no RESEND_API_KEY), return the code for testing
+    // In dev mode (no RESEND_API_KEY) or if email fails, return the code for testing
     if (!process.env.RESEND_API_KEY) {
       return { success: true, message: 'Verification code sent (dev mode)', devCode: code };
     }
 
     if (!sent) {
-      return { success: false, message: 'Failed to send verification code' };
+      return { success: false, message: 'Failed to send verification code', devCode: code };
     }
 
     return { success: true, message: 'Verification code sent to your email' };
