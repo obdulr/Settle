@@ -36,9 +36,11 @@ export default function Navigation() {
     router.push('/');
   };
 
-  // Marketplace links — condensed when logged in
-  const marketplaceItems = authenticated
+  // Nav links — marketplace + key account links when authenticated
+  const navItems = authenticated
     ? [
+        { href: '/dashboard', label: 'Dashboard' },
+        { href: '/debts', label: 'My Debts' },
         { href: '/assessment', label: 'Free Assessment' },
         { href: '/compare', label: 'Compare Providers' },
       ]
@@ -49,10 +51,8 @@ export default function Navigation() {
         { href: '/providers', label: 'For Providers' },
       ];
 
-  // Account menu items for dropdown
-  const accountItems = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/debts', label: 'My Debts' },
+  // Additional account items for dropdown only
+  const dropdownItems = [
     { href: '/coaching', label: 'Coaching' },
     { href: '/settings', label: 'Settings' },
   ];
@@ -76,7 +76,7 @@ export default function Navigation() {
               Settle<span className="text-blue-600">InPeace</span>
             </Link>
             <div className="hidden sm:flex sm:space-x-6">
-              {marketplaceItems.map(item => (
+              {navItems.map(item => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -162,8 +162,8 @@ export default function Navigation() {
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{user.email}</p>
                     </div>
 
-                    {/* Account links */}
-                    {accountItems.map(item => (
+                    {/* Dropdown-only account links */}
+                    {dropdownItems.map(item => (
                       <Link
                         key={item.href}
                         href={item.href}
