@@ -41,15 +41,16 @@ import { BillingModule } from './billing/billing.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      ssl: process.env.DATABASE_SSL_CA
+        ? { ca: process.env.DATABASE_SSL_CA }
+        : true,
       extra: {
-        ssl: { rejectUnauthorized: false },
         connectionTimeoutMillis: 10000,
         idleTimeoutMillis: 30000,
         keepAlive: true,
       },
       entities: [User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient],
-      synchronize: process.env.NODE_ENV !== 'production' || process.env.DB_SYNC === 'true',
+      synchronize: false,
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
       retryAttempts: 5,

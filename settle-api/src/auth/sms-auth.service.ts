@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { TelnyxService } from './telnyx.service';
 
 @Injectable()
@@ -9,7 +10,7 @@ export class SmsAuthService {
   constructor(private telnyxService: TelnyxService) {}
 
   async sendOTP(phone: string): Promise<{ success: boolean; error?: string }> {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = crypto.randomInt(100000, 999999).toString();
     const expires = Date.now() + 10 * 60 * 1000;
     this.otpStore.set(phone, { code, expires });
 

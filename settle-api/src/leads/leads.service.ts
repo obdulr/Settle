@@ -116,11 +116,20 @@ export class LeadsService {
   }
 
   async getAvailableLeads() {
-    return this.leadsRepository.find({
+    const leads = await this.leadsRepository.find({
       where: { status: 'available' },
       order: { qualityScore: 'DESC', createdAt: 'DESC' },
       take: 50,
     });
+
+    // Mask sensitive PII (phone, email, lastName) for available leads that
+    // have not been purchased — mirrors the masking in getLeadDetails.
+    return leads.map((lead) => ({
+      ...lead,
+      phone: this.maskValue(lead.phone),
+      email: this.maskEmail(lead.email),
+      lastName: this.maskValue(lead.lastName),
+    }));
   }
 
   async purchaseLead(leadId: string, providerId: string): Promise<Lead> {

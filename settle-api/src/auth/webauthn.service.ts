@@ -115,7 +115,8 @@ export class WebAuthnService {
 
     const storedChallenge = this.challenges.get(email);
     if (storedChallenge && storedChallenge !== expectedChallenge) {
-      // Challenge mismatch
+      this.challenges.delete(email);
+      throw new UnauthorizedException('WebAuthn challenge mismatch');
     }
 
     const verification = await verifyAuthenticationResponse({

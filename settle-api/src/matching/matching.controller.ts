@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
 import { MatchingService } from './matching.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ProviderGuard } from '../auth/guards/provider.guard';
 import { AdminGuard } from '../admin/admin.guard';
 
 @Controller('matching')
@@ -25,21 +26,25 @@ export class MatchingController {
 
   /** Provider: get leads matched to the authenticated provider. */
   @Get('matched-leads')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ProviderGuard)
   async getMatchedLeads(@Request() req) {
     return this.matchingService.getMatchedLeadsForProvider(req.user.sub);
   }
 
-  /** Provider: decline a match. */
+  /** Provider or consumer: decline a match (ownership verified in service). */
   @Post(':id/decline')
   @UseGuards(JwtAuthGuard)
-  async declineMatch(@Param('id') id: string, @Body('userType') userType: 'provider' | 'consumer' = 'provider') {
-    return this.matchingService.declineMatch(id, userType);
+  async declineMatch(
+    @Param('id') id: string,
+    @Body('userType') userType: 'provider' | 'consumer' = 'provider',
+    @Request() req,
+  ) {
+    return this.matchingService.declineMatch(id, userType, req.user.sub);
   }
 
   /** Provider: match history. */
   @Get('history')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ProviderGuard)
   async getMatchHistory(@Request() req) {
     return this.matchingService.getMatchHistory(req.user.sub);
   }

@@ -2,6 +2,7 @@ import { Controller, Post, Get, Param, Body, UseGuards, Request } from '@nestjs/
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { LeadsService } from './leads.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ProviderGuard } from '../auth/guards/provider.guard';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { BatchPurchaseLeadsDto } from './dto/batch-purchase-leads.dto';
 
@@ -19,7 +20,7 @@ export class LeadsController {
   // Provider-only: see available leads in marketplace
   @SkipThrottle()
   @Get('available')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ProviderGuard)
   async getAvailableLeads() {
     return this.leadsService.getAvailableLeads();
   }
@@ -27,7 +28,7 @@ export class LeadsController {
   // Provider-only: purchase a lead
   @SkipThrottle()
   @Post(':id/purchase')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ProviderGuard)
   async purchaseLead(@Param('id') id: string, @Request() req) {
     // In production, req.user.sub would be the provider ID from their JWT
     return this.leadsService.purchaseLead(id, req.user.sub);
@@ -36,7 +37,7 @@ export class LeadsController {
   // Provider-only: view leads they purchased
   @SkipThrottle()
   @Get('my-leads')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ProviderGuard)
   async getMyLeads(@Request() req) {
     return this.leadsService.getLeadsByProvider(req.user.sub);
   }
@@ -51,7 +52,7 @@ export class LeadsController {
   // Provider-only: full lead details before purchase (sensitive info masked)
   @SkipThrottle()
   @Get(':id/details')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ProviderGuard)
   async getLeadDetails(@Param('id') id: string, @Request() req) {
     return this.leadsService.getLeadDetails(id, req.user.sub);
   }
@@ -59,7 +60,7 @@ export class LeadsController {
   // Provider-only: purchase multiple leads (body: { leadIds: string[] })
   @SkipThrottle()
   @Post('batch-purchase')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ProviderGuard)
   async batchPurchaseLeads(@Body() body: BatchPurchaseLeadsDto, @Request() req) {
     return this.leadsService.batchPurchaseLeads(body.leadIds, req.user.sub);
   }

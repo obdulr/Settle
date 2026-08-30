@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException, OnModuleIni
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository, LessThan } from 'typeorm';
+import * as crypto from 'crypto';
 import { Deposit } from '../entities/deposit.entity';
 import { Provider } from '../entities/provider.entity';
 import { ProvidersService } from '../providers/providers.service';
@@ -40,10 +41,19 @@ export class BillingService implements OnModuleInit {
   verifyWebhookSignature(signature?: string) {
     const secret = this.configService.get<string>('BANKING_WEBHOOK_SECRET');
     if (!secret) {
-      this.logger.warn('BANKING_WEBHOOK_SECRET is not set — accepting webhook without signature');
-      return;
+      throw new BadRequestException('BANKING_WEBHOOK_SECRET is not configured');
     }
-    if (!signature || signature !== secret) {
+    if (!signature) {
+      throw new BadRequestException('Missing banking webhook signature');
+    }
+
+    // Use a constant-time comparison to prevent timing attacks.
+    const signatureBuffer = Buffer.from(signature);
+    const secretBuffer = Buffer.from(secret);
+    if (signatureBuffer.length !== secretBuffer.length) {
+      throw new BadRequestException('Invalid banking webhook signature');
+    }
+    if (!crypto.timingSafeEqual(signatureBuffer, secretBuffer)) {
       throw new BadRequestException('Invalid banking webhook signature');
     }
   }

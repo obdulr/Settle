@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { User } from '../entities/user.entity';
 import { Provider } from '../entities/provider.entity';
 import { RegisterDto } from './dtos/register.dto';
@@ -97,11 +98,13 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: '1h',
       secret: process.env.JWT_SECRET,
+      algorithm: 'HS256',
     });
 
     const refreshToken = this.jwtService.sign(payload, {
       expiresIn: '7d',
       secret: process.env.JWT_REFRESH_SECRET,
+      algorithm: 'HS256',
     });
 
     return { accessToken, refreshToken, expiresIn: 60 * 60 }; // 1 hour in seconds
@@ -121,7 +124,7 @@ export class AuthService {
         requiresVerification: true,
         email: user.email,
         message: otpResult.message || 'Please verify your email with the code we sent.',
-        ...(otpResult.devCode ? { devCode: otpResult.devCode } : {}),
+        ...(otpResult.devCode && process.env.NODE_ENV === 'development' ? { devCode: otpResult.devCode } : {}),
       };
     }
 
@@ -162,6 +165,7 @@ export class AuthService {
     try {
       const payload = this.jwtService.verify(refreshToken, {
         secret: process.env.JWT_REFRESH_SECRET,
+        algorithms: ['HS256'],
       });
 
       // Look up the user to ensure they still exist and are valid
@@ -183,6 +187,7 @@ export class AuthService {
         {
           expiresIn: '1h',
           secret: process.env.JWT_SECRET,
+          algorithm: 'HS256',
         },
       );
 
@@ -249,7 +254,7 @@ export class AuthService {
       requiresVerification: true,
       email: user.email,
       message: otpResult.message || 'Check your email for a verification code.',
-      ...(otpResult.devCode ? { devCode: otpResult.devCode } : {}),
+      ...(otpResult.devCode && process.env.NODE_ENV === 'development' ? { devCode: otpResult.devCode } : {}),
     };
   }
 
@@ -454,7 +459,7 @@ export class AuthService {
       return { success: true, message: 'If an account exists, a verification code was sent' };
     }
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = crypto.randomInt(100000, 999999).toString();
     const expires = new Date();
     expires.setMinutes(expires.getMinutes() + 10); // 10 minute expiry
 
@@ -468,11 +473,11 @@ export class AuthService {
 
     // In dev mode (no RESEND_API_KEY) or if email fails, return the code for testing
     if (!process.env.RESEND_API_KEY) {
-      return { success: true, message: 'Verification code sent (dev mode)', devCode: code };
+      return { success: true, message: 'Verification code sent (dev mode)', devCode: process.env.NODE_ENV === 'development' ? code : undefined };
     }
 
     if (!sent) {
-      return { success: false, message: 'Failed to send verification code', devCode: code };
+      return { success: false, message: 'Failed to send verification code', devCode: process.env.NODE_ENV === 'development' ? code : undefined };
     }
 
     return { success: true, message: 'Verification code sent to your email' };
@@ -558,7 +563,7 @@ export class AuthService {
       throw new BadRequestException('No phone number on file. Please add a phone number first.');
     }
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = crypto.randomInt(100000, 999999).toString();
     const expires = new Date();
     expires.setMinutes(expires.getMinutes() + 10);
 
@@ -572,11 +577,11 @@ export class AuthService {
 
     if (!process.env.TELNYX_API_KEY || !process.env.TELNYX_PHONE_NUMBER) {
       this.logger.log(`[DEV SMS] Phone OTP for ${user.phone}: ${code}`);
-      return { success: true, message: 'Verification code sent (dev mode)', devCode: code };
+      return { success: true, message: 'Verification code sent (dev mode)', devCode: process.env.NODE_ENV === 'development' ? code : undefined };
     }
 
     if (!result.success) {
-      return { success: false, message: result.error || 'Failed to send SMS', devCode: code };
+      return { success: false, message: result.error || 'Failed to send SMS', devCode: process.env.NODE_ENV === 'development' ? code : undefined };
     }
 
     return { success: true, message: 'Verification code sent to your phone' };
