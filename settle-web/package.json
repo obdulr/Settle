@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3025 --webpack",
-    "build": "pnpm --filter @settle/shared-sdk build && next build",
+    "build": "cd ../packages/shared-sdk && pnpm install && pnpm run build && cd ../../settle-web && next build",
     "start": "next start -p 3025",
     "lint": "eslint"
   },
   "dependencies": {
-    "@settle/shared-sdk": "workspace:*",
+    "@settle/shared-sdk": "file:../packages/shared-sdk",
     "@simplewebauthn/browser": "^13.3.0",
     "@stripe/react-stripe-js": "^6.7.0",
     "@stripe/stripe-js": "^9.9.0",
