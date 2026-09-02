@@ -66,6 +66,14 @@ const MONTHS_LABELS: Record<string, string> = {
   '12': 'In collections',
 };
 
+// Exact TCPA disclosure text shown next to the consent checkbox. This is
+// sent to the backend and stored on the lead record so there is a verifiable
+// audit trail of what the consumer agreed to. If this text changes, bump the
+// page version so historical consent records remain attributable.
+const TCPA_CONSENT_LANGUAGE =
+  'I agree to be contacted by Settle In Peace and its partner debt relief providers by phone, email, or text message regarding my debt situation. I understand this constitutes a TCPA-compliant opt-in and that standard message and data rates may apply. I may opt out at any time.';
+const CONSENT_PAGE_VERSION = 'assessment-v1';
+
 export default function AssessmentPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -135,6 +143,9 @@ export default function AssessmentPage() {
         totalDebt: parseFloat(form.totalDebt),
         monthsBehind: parseInt(form.monthsBehind) || 0,
         monthlyIncome: parseFloat(form.monthlyIncome) || 0,
+        tcpaConsent: form.tcpaConsent,
+        consentLanguage: TCPA_CONSENT_LANGUAGE,
+        consentPageVersion: CONSENT_PAGE_VERSION,
       });
       const returnedLeadId = String(response.id ?? (response.lead as { id?: string } | undefined)?.id ?? '');
       if (!returnedLeadId) throw new Error('Assessment was submitted but no lead ID was returned.');
@@ -546,7 +557,7 @@ export default function AssessmentPage() {
                   className="mt-1 w-5 h-5 accent-blue-600 flex-shrink-0"
                 />
                 <span className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                  I agree to be contacted by Settle In Peace and its partner debt relief providers by phone, email, or text message regarding my debt situation. I understand this constitutes a TCPA-compliant opt-in and that standard message and data rates may apply. I may opt out at any time.
+                  {TCPA_CONSENT_LANGUAGE}
                 </span>
               </label>
               {error && (

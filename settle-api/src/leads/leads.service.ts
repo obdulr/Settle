@@ -25,6 +25,18 @@ export class LeadsService {
   ) {}
 
   async submitAssessment(data: Partial<Lead>): Promise<Lead> {
+    // TCPA consent is a hard legal requirement for debt-relief lead
+    // distribution. We must NOT default or force it to true — the consumer
+    // must have actively opted in, and we must preserve the audit metadata
+    // (disclosure text, IP, user agent, page version, timestamp) that proves
+    // what they agreed to. A lead without genuine consent cannot be sold or
+    // contacted.
+    if (!data.tcpaConsent) {
+      throw new BadRequestException(
+        'TCPA consent is required to submit an assessment. The consumer must actively agree to be contacted.',
+      );
+    }
+
     const score = this.calculateQualityScore(data);
 
     const expiresAt = new Date();
@@ -51,7 +63,13 @@ export class LeadsService {
       mlTier,
       status: score >= 40 ? 'available' : 'new',
       expiresAt,
-      tcpaConsent: true,
+      // Use the real consent value and audit metadata from the request —
+      // never force these. consentTimestamp records the moment of opt-in.
+      tcpaConsent: data.tcpaConsent,
+      consentLanguage: data.consentLanguage,
+      consentIp: data.consentIp,
+      consentUserAgent: data.consentUserAgent,
+      consentPageVersion: data.consentPageVersion,
       consentTimestamp: new Date(),
     });
 

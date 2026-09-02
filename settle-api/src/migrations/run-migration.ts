@@ -13,6 +13,8 @@ import { AddMatchEmailSentAtAndProviderEmailVerified1700000000008 } from './1700
 import { AddMissingUserColumns1700000000009 } from './1700000000009-AddMissingUserColumns';
 import { CreateDeposits1700000000010 } from './1700000000010-CreateDeposits';
 import { AddPhoneOtpColumns1700000000011 } from './1700000000011-AddPhoneOtpColumns';
+import { AddLeadConsentAuditColumns1700000000012 } from './1700000000012-AddLeadConsentAuditColumns';
+import { CreateCrmTables1700000000013 } from './1700000000013-CreateCrmTables';
 
 type MigrationConstructor = new () => MigrationInterface;
 
@@ -30,6 +32,8 @@ const migrations: MigrationConstructor[] = [
   AddMissingUserColumns1700000000009,
   CreateDeposits1700000000010,
   AddPhoneOtpColumns1700000000011,
+  AddLeadConsentAuditColumns1700000000012,
+  CreateCrmTables1700000000013,
 ];
 
 async function ensureMigrationsTable(queryRunner: QueryRunner): Promise<void> {

@@ -13,8 +13,19 @@ export class LeadsController {
   // Public: consumer submits the assessment quiz
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('assessment')
-  async submitAssessment(@Body() body: CreateLeadDto) {
-    return this.leadsService.submitAssessment(body);
+  async submitAssessment(@Body() body: CreateLeadDto, @Request() req: any) {
+    // Capture TCPA consent audit metadata from the request. The X-Forwarded-For
+    // header carries the real client IP when behind Render/Railway proxies.
+    const forwarded = req.headers?.['x-forwarded-for'];
+    const ip = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(',')[0]?.trim();
+    const consentIp = ip || req.socket?.remoteAddress || req.ip || '';
+    const consentUserAgent = req.headers?.['user-agent'] || '';
+
+    return this.leadsService.submitAssessment({
+      ...body,
+      consentIp,
+      consentUserAgent,
+    });
   }
 
   // Provider-only: see available leads in marketplace
