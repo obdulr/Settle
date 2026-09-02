@@ -43,7 +43,10 @@ export default function FirebasePhoneVerify({ phone, token, onVerified }: Fireba
         size: 'invisible',
       });
 
-      const confirmation = await signInWithPhoneNumber(auth, phone, recaptchaRef.current);
+      const digits = phone.replace(/\D/g, '');
+      const e164Phone = phone.startsWith('+') ? phone : digits.startsWith('1') ? `+${digits}` : `+1${digits}`;
+
+      const confirmation = await signInWithPhoneNumber(auth, e164Phone, recaptchaRef.current);
       confirmationRef.current = confirmation;
       setStatus('sent');
       setMessage('Code sent to your phone.');
@@ -64,13 +67,16 @@ export default function FirebasePhoneVerify({ phone, token, onVerified }: Fireba
       const idToken = await credential.user.getIdToken();
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025';
+      const digits = phone.replace(/\D/g, '');
+      const e164Phone = phone.startsWith('+') ? phone : digits.startsWith('1') ? `+${digits}` : `+1${digits}`;
+
       const res = await fetch(`${apiUrl}/auth/verify-phone-firebase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ idToken, phone }),
+        body: JSON.stringify({ idToken, phone: e164Phone }),
       });
 
       const data = await res.json();

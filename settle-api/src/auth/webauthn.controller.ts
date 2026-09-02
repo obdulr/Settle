@@ -1,4 +1,4 @@
-import { Controller, Post, Delete, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, UseGuards, Request } from '@nestjs/common';
 import { WebAuthnService } from './webauthn.service';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -61,7 +61,7 @@ export class WebAuthnController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post('status')
+  @Get('status')
   async passkeyStatus(@Request() req) {
     const hasPasskey = await this.webauthnService.hasPasskey(req.user.sub);
     return { hasPasskey };
