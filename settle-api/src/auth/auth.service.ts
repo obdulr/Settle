@@ -575,7 +575,7 @@ export class AuthService {
 
     const result = await this.telnyxService.sendOTP(user.phone, code);
 
-    if (!process.env.TELNYX_API_KEY || !process.env.TELNYX_PHONE_NUMBER) {
+    if (!process.env.TELNYX_API_KEY || !process.env.TELNYX_FROM_NUMBER) {
       this.logger.log(`[DEV SMS] Phone OTP for ${user.phone}: ${code}`);
       return { success: true, message: 'Verification code sent (dev mode)', devCode: process.env.NODE_ENV === 'development' ? code : undefined };
     }

@@ -9,7 +9,7 @@ export class TelnyxService {
 
   constructor() {
     this.apiKey = process.env.TELNYX_API_KEY || '';
-    this.fromNumber = process.env.TELNYX_PHONE_NUMBER || '';
+    this.fromNumber = process.env.TELNYX_FROM_NUMBER || '';
   }
 
   async sendSMS(phoneNumber: string, message: string): Promise<{ success: boolean; error?: string; messageId?: string }> {
