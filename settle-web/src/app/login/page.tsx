@@ -33,10 +33,6 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  if (checkingAuth) {
-    return <LoadingSpinner />;
-  }
-
   // Prefill email/mode from query string (e.g. after registration)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -56,6 +52,10 @@ export default function LoginPage() {
       }
     }
   }, []);
+
+  if (checkingAuth) {
+    return <LoadingSpinner />;
+  }
 
   const apiCall = createJsonApiClient({
     getBaseUrl: () => API_URL,
