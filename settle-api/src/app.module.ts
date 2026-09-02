@@ -43,7 +43,7 @@ import { BillingModule } from './billing/billing.module';
       url: process.env.DATABASE_URL,
       ssl: process.env.DATABASE_SSL_CA
         ? { ca: process.env.DATABASE_SSL_CA }
-        : true,
+        : { rejectUnauthorized: false },
       extra: {
         connectionTimeoutMillis: 10000,
         idleTimeoutMillis: 30000,

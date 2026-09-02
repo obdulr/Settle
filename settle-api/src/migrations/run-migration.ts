@@ -10,6 +10,7 @@ import { FixPasskeyColumns1700000000005 } from './1700000000005-FixPasskeyColumn
 import { AddLeadQualityTier1700000000006 } from './1700000000006-AddLeadQualityTier';
 import { CreateCoachingEntities1700000000007 } from './1700000000007-CreateCoachingEntities';
 import { AddMatchEmailSentAtAndProviderEmailVerified1700000000008 } from './1700000000008-AddMatchEmailSentAtAndProviderEmailVerified';
+import { CreateMatches1700000000007_5 } from './1700000000007-CreateMatches';
 import { AddMissingUserColumns1700000000009 } from './1700000000009-AddMissingUserColumns';
 import { CreateDeposits1700000000010 } from './1700000000010-CreateDeposits';
 import { AddPhoneOtpColumns1700000000011 } from './1700000000011-AddPhoneOtpColumns';
@@ -28,6 +29,7 @@ const migrations: MigrationConstructor[] = [
   FixPasskeyColumns1700000000005,
   AddLeadQualityTier1700000000006,
   CreateCoachingEntities1700000000007,
+  CreateMatches1700000000007_5,
   AddMatchEmailSentAtAndProviderEmailVerified1700000000008,
   AddMissingUserColumns1700000000009,
   CreateDeposits1700000000010,
