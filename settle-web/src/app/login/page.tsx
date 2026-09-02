@@ -23,9 +23,17 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState('');
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
-  if (typeof window !== 'undefined' && isAuthenticated()) {
-    router.push('/dashboard');
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isAuthenticated()) {
+      router.replace('/dashboard');
+    } else {
+      setCheckingAuth(false);
+    }
+  }, [router]);
+
+  if (checkingAuth) {
     return <LoadingSpinner />;
   }
 
