@@ -3,6 +3,11 @@ import { Throttle } from '@nestjs/throttler';
 import { SmsAuthService } from './sms-auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
+class FirebasePhoneDto {
+  idToken: string;
+  phone: string;
+}
+
 @Controller('auth/sms')
 export class SmsAuthController {
   constructor(private smsAuthService: SmsAuthService) {}
@@ -17,5 +22,10 @@ export class SmsAuthController {
   @Post('verify')
   verifyOTP(@Body() body: { phone: string; code: string }) {
     return this.smsAuthService.verifyOTP(body.phone, body.code);
+  }
+
+  @Post('firebase-verify')
+  async verifyFirebasePhoneToken(@Body() body: FirebasePhoneDto) {
+    return this.smsAuthService.verifyFirebasePhoneToken(body.idToken, body.phone);
   }
 }

@@ -10,6 +10,7 @@ import { WebAuthnController } from './webauthn.controller';
 import { TelnyxService } from './telnyx.service';
 import { SmsAuthService } from './sms-auth.service';
 import { SmsAuthController } from './sms-auth.controller';
+import { FirebaseModule } from '../firebase/firebase.module';
 import { User } from '../entities/user.entity';
 import { Provider } from '../entities/provider.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -23,6 +24,7 @@ import { EmailModule } from '../email/email.module';
     PassportModule,
     ActivitiesModule,
     EmailModule,
+    FirebaseModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {

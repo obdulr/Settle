@@ -51,7 +51,7 @@ services:
         sync: false
       - key: TELNYX_FROM_NUMBER
         sync: false
-      - key: TELNYX_MESSAGING_PROFILE_ID
+      - key: FIREBASE_SERVICE_ACCOUNT
         sync: false
       - key: AUTO_MATCH_THRESHOLD
         value: "70"
@@ -74,5 +74,19 @@ services:
       - key: NEXT_PUBLIC_APP_URL
         value: https://www.settleinpeace.com
       - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_APP_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
         sync: false
     autoDeploy: true

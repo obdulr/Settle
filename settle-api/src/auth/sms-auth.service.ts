@@ -1,13 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { TelnyxService } from './telnyx.service';
+import { FirebaseService } from '../firebase/firebase.service';
 
 @Injectable()
 export class SmsAuthService {
   private readonly logger = new Logger(SmsAuthService.name);
   private otpStore: Map<string, { code: string; expires: number }> = new Map();
 
-  constructor(private telnyxService: TelnyxService) {}
+  constructor(private telnyxService: TelnyxService, private firebaseService: FirebaseService) {}
 
   async sendOTP(phone: string): Promise<{ success: boolean; error?: string }> {
     const code = crypto.randomInt(100000, 999999).toString();
@@ -35,5 +36,9 @@ export class SmsAuthService {
     }
     this.otpStore.delete(phone);
     return { success: true };
+  }
+
+  async verifyFirebasePhoneToken(idToken: string, phone: string): Promise<{ success: boolean; error?: string; phone?: string }> {
+    return this.firebaseService.verifyPhoneToken(idToken, phone);
   }
 }

@@ -115,4 +115,11 @@ export class AuthController {
   async verifyPhoneOtp(@Request() req, @Body() body: { code: string }) {
     return this.authService.verifyPhoneOtp(req.user.sub, body.code);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post('verify-phone-firebase')
+  async verifyPhoneFirebase(@Request() req, @Body() body: { idToken: string; phone: string }) {
+    return this.authService.verifyPhoneWithFirebase(req.user.sub, body.idToken, body.phone);
+  }
 }

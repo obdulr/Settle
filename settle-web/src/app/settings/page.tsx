@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createJsonApiClient } from '@settle/shared-sdk/auth';
 import { startRegistration } from '@simplewebauthn/browser';
 import { getStoredToken, getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
+import FirebasePhoneVerify from '../../components/FirebasePhoneVerify';
 
 interface UserProfile {
   id: string;
@@ -343,13 +344,21 @@ export default function SettingsPage() {
                           Unverified
                         </span>
                         {!phoneOtpSent && (
-                          <button
-                            onClick={handleSendPhoneOtp}
-                            disabled={phoneVerifying}
-                            className="text-sm text-blue-600 hover:underline disabled:opacity-50"
-                          >
-                            {phoneVerifying ? 'Sending...' : 'Verify phone number'}
-                          </button>
+                          process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? (
+                            <FirebasePhoneVerify
+                              phone={editForm.phone}
+                              token={getStoredToken()}
+                              onVerified={() => setUser(prev => prev ? { ...prev, phoneVerified: true } : prev)}
+                            />
+                          ) : (
+                            <button
+                              onClick={handleSendPhoneOtp}
+                              disabled={phoneVerifying}
+                              className="text-sm text-blue-600 hover:underline disabled:opacity-50"
+                            >
+                              {phoneVerifying ? 'Sending...' : 'Verify phone number'}
+                            </button>
+                          )
                         )}
                       </>
                     )}

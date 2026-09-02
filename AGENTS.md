@@ -4,13 +4,19 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-## SMS Provider: Telnyx ONLY
+## SMS / Phone Authentication Providers
 
-**NEVER use Twilio.** Twilio is not used in any project. All SMS, MMS, and messaging functionality uses **Telnyx** exclusively.
+**Never use Twilio.**
 
-- Use the Telnyx API (`https://api.telnyx.com/v2/messages`) for sending SMS
-- Env vars: `TELNYX_API_KEY`, `TELNYX_FROM_NUMBER`, `TELNYX_MESSAGING_PROFILE_ID`
-- Do not suggest, install, or reference Twilio in any code, config, or documentation
+### Direct SMS
+- Use the Telnyx API (`https://api.telnyx.com/v2/messages`) for direct SMS/MMS.
+- Env vars: `TELNYX_API_KEY`, `TELNYX_FROM_NUMBER`
+
+### Phone OTP / Verification
+- Telnyx remains the default backend-driven OTP provider.
+- **Firebase Phone Authentication** may be used as an alternative for phone verification (especially when Telnyx is cost-prohibitive). It handles SMS delivery and reCAPTCHA client-side and is verified server-side with `firebase-admin`.
+- Backend env var: `FIREBASE_SERVICE_ACCOUNT` (single-line service-account JSON)
+- Frontend env vars: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`
 
 # Project Standardization
 

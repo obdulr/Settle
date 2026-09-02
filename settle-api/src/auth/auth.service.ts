@@ -14,6 +14,7 @@ import { UpdateProfileDto } from './dtos/update-profile.dto';
 import { ActivitiesService } from '../activities/activities.service';
 import { EmailService } from '../email/email.service';
 import { TelnyxService } from './telnyx.service';
+import { FirebaseService } from '../firebase/firebase.service';
 
 @Injectable()
 export class AuthService {
@@ -28,6 +29,7 @@ export class AuthService {
     private activitiesService: ActivitiesService,
     private emailService: EmailService,
     private telnyxService: TelnyxService,
+    private firebaseService: FirebaseService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -629,6 +631,36 @@ export class AuthService {
       'phone_verified',
       'User verified phone number',
       { phone: user.phone },
+    );
+
+    return { success: true, message: 'Phone number verified' };
+  }
+
+  async verifyPhoneWithFirebase(
+    userId: string,
+    idToken: string,
+    phone: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const result = await this.firebaseService.verifyPhoneToken(idToken, phone);
+    if (!result.success) {
+      throw new UnauthorizedException(result.error || 'Invalid phone verification token');
+    }
+
+    await this.usersRepository.update(userId, {
+      phone,
+      phoneVerified: true,
+    });
+
+    await this.activitiesService.createActivity(
+      userId,
+      'phone_verified',
+      'User verified phone number with Firebase',
+      { phone },
     );
 
     return { success: true, message: 'Phone number verified' };
