@@ -41,8 +41,11 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   // Enable CORS from env variable (comma-separated), with dev fallback
+  // In development, allow all origins so browser preview / arbitrary ports work.
   app.enableCors({
-    origin: process.env.CORS_ORIGINS?.split(',').map((o) => o.trim()) || ['http://localhost:3025'],
+    origin: process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
+      ? true
+      : process.env.CORS_ORIGINS?.split(',').map((o) => o.trim()) || ['http://localhost:3025'],
     credentials: true,
   });
 
