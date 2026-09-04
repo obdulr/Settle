@@ -17,6 +17,7 @@ import { AddPhoneOtpColumns1700000000011 } from './1700000000011-AddPhoneOtpColu
 import { AddNotificationPreferences1700000000012 } from './1700000000012-AddNotificationPreferences';
 import { AddLeadConsentAuditColumns1700000000012 } from './1700000000012-AddLeadConsentAuditColumns';
 import { CreateCrmTables1700000000013 } from './1700000000013-CreateCrmTables';
+import { AddUserDeletedAt1700000000014 } from './1700000000014-AddUserDeletedAt';
 
 type MigrationConstructor = new () => MigrationInterface;
 
@@ -38,6 +39,7 @@ const migrations: MigrationConstructor[] = [
   AddNotificationPreferences1700000000012,
   AddLeadConsentAuditColumns1700000000012,
   CreateCrmTables1700000000013,
+  AddUserDeletedAt1700000000014,
 ];
 
 async function ensureMigrationsTable(queryRunner: QueryRunner): Promise<void> {

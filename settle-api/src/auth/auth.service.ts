@@ -36,6 +36,9 @@ export class AuthService {
     // Check regular users first
     const user = await this.usersRepository.findOne({ where: { email } });
     if (user && user.password) {
+      if (user.deletedAt) {
+        return null;
+      }
       if (user.lockoutExpiresAt && user.lockoutExpiresAt > new Date()) {
         throw new ForbiddenException('Account is temporarily locked. Please try again in 15 minutes.');
       }
@@ -261,7 +264,7 @@ export class AuthService {
   }
 
   async getProfile(userId: string) {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    const user = await this.usersRepository.findOne({ where: { id: userId, deletedAt: null } });
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
@@ -450,6 +453,24 @@ export class AuthService {
     const updatedUser = await this.usersRepository.findOne({ where: { id: userId } });
     const { password: _, ...result } = updatedUser!;
     return result;
+  }
+
+  async deleteAccount(userId: string) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    await this.usersRepository.update(userId, { deletedAt: new Date() });
+
+    await this.activitiesService.createActivity(
+      userId,
+      'account_deleted',
+      'User deleted their account',
+      { email: user.email }
+    );
+
+    return { success: true, message: 'Account deleted successfully' };
   }
 
   // ============================================================

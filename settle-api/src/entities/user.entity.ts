@@ -96,6 +96,9 @@ export class User {
   @Column({ name: 'last_password_change_at', type: 'timestamp', nullable: true })
   lastPasswordChangeAt?: Date;
 
+  @Column({ name: 'deleted_at', type: 'timestamp', nullable: true })
+  deletedAt?: Date;
+
   // Password reset
   @Column({ name: 'reset_token', length: 255, nullable: true, select: false })
   resetToken?: string;

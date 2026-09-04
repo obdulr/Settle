@@ -40,6 +40,9 @@ export default function SettingsPage() {
   const [hasPasskey, setHasPasskey] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [passkeyMessage, setPasskeyMessage] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const checkPasskeyStatus = useCallback(async () => {
     try {
@@ -222,6 +225,23 @@ export default function SettingsPage() {
       setError('Failed to save notification preferences');
     } finally {
       setSavingNotifications(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') return;
+    setDeletingAccount(true);
+    setError('');
+    try {
+      const apiCall = getApiCall();
+      await apiCall<{ success: boolean }>('/auth/account', { method: 'DELETE' });
+      clearAuth();
+      router.push('/');
+    } catch {
+      setDeletingAccount(false);
+      setDeleteConfirmOpen(false);
+      setDeleteConfirmText('');
+      setError('Failed to delete account. Please try again.');
     }
   };
 
@@ -581,19 +601,52 @@ export default function SettingsPage() {
           <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-md p-6 border-2 border-red-200 dark:border-red-900">
             <h2 className="text-lg font-semibold mb-4 text-red-600 dark:text-red-400">Danger Zone</h2>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 rounded-md">
-                <div>
-                  <p className="font-medium text-black dark:text-white">Delete Account</p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Permanently delete your account and all data
-                  </p>
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-md">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="font-medium text-black dark:text-white">Delete Account</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Permanently delete your account and all data
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setDeleteConfirmOpen(true)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
+                  >
+                    Delete Account
+                  </button>
                 </div>
-                <button
-                  disabled
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
-                >
-                  Delete Account
-                </button>
+
+                {deleteConfirmOpen && (
+                  <div className="mt-4 p-4 bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-800 rounded-md">
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300 mb-4">
+                      This action cannot be undone. Type <strong>DELETE</strong> below to confirm.
+                    </p>
+                    <input
+                      type="text"
+                      placeholder="Type DELETE to confirm"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-md mb-3 dark:bg-zinc-800 dark:text-white"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleDeleteAccount}
+                        disabled={deletingAccount || deleteConfirmText !== 'DELETE'}
+                        className="flex-1 py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {deletingAccount ? 'Deleting...' : 'Confirm Delete'}
+                      </button>
+                      <button
+                        onClick={() => { setDeleteConfirmOpen(false); setDeleteConfirmText(''); }}
+                        disabled={deletingAccount}
+                        className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 rounded-md">
                 <div>

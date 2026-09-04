@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, UsePipes, ValidationPipe, Put } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, UsePipes, ValidationPipe, Put, Delete } from '@nestjs/common';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
@@ -80,6 +80,12 @@ export class AuthController {
   @Put('profile')
   async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
     return this.authService.updateProfile(req.user.sub, updateProfileDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('account')
+  async deleteAccount(@Request() req) {
+    return this.authService.deleteAccount(req.user.sub);
   }
 
   // ============================================================
