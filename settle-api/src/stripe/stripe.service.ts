@@ -447,10 +447,10 @@ export class StripeService {
         await this.upsertCoachingSubscription(userId, subscriptionId, status, new Date());
         this.logger.log(`User ${userId} subscribed to coaching`);
 
-        // Send coaching welcome email
+        // Send coaching welcome email (respect notification preferences)
         try {
           const user = await this.usersRepository.findOne({ where: { id: userId } });
-          if (user) {
+          if (user && user.emailNotifications !== false) {
             await this.emailService.sendCoachingWelcome(user);
           }
         } catch (err) {
@@ -545,10 +545,10 @@ export class StripeService {
       await this.upsertCoachingSubscription(userId, subscription.id, 'canceled', undefined, new Date());
       this.logger.log(`User ${userId} coaching subscription canceled`);
 
-      // Send cancellation email
+      // Send cancellation email (respect notification preferences)
       try {
         const user = await this.usersRepository.findOne({ where: { id: userId } });
-        if (user) {
+        if (user && user.emailNotifications !== false) {
           await this.emailService.sendSubscriptionCancelled(user, 'coaching');
         }
       } catch (err) {
@@ -586,7 +586,7 @@ export class StripeService {
     if (type === 'coaching_subscription' && userId) {
       try {
         const user = await this.usersRepository.findOne({ where: { id: userId } });
-        if (user) {
+        if (user && user.emailNotifications !== false) {
           await this.emailService.sendPaymentFailed(user, 'coaching', amount);
         }
       } catch (err) {
@@ -611,7 +611,7 @@ export class StripeService {
     if (customerId && !userId && !providerId) {
       try {
         const user = await this.usersRepository.findOne({ where: { stripeCustomerId: customerId } });
-        if (user) {
+        if (user && user.emailNotifications !== false) {
           await this.emailService.sendPaymentFailed(user, 'coaching', amount);
           return;
         }
