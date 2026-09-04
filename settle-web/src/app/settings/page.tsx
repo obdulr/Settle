@@ -16,6 +16,8 @@ interface UserProfile {
   phone?: string;
   phoneVerified?: boolean;
   emailVerified?: boolean;
+  emailNotifications?: boolean;
+  smsNotifications?: boolean;
   createdAt?: string;
 }
 
@@ -27,6 +29,8 @@ export default function SettingsPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [activeTab, setActiveTab] = useState('profile');
   const [editForm, setEditForm] = useState({ firstName: '', lastName: '', phone: '' });
+  const [notificationForm, setNotificationForm] = useState({ emailNotifications: true, smsNotifications: false });
+  const [savingNotifications, setSavingNotifications] = useState(false);
   const [saving, setSaving] = useState(false);
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
   const [phoneOtpCode, setPhoneOtpCode] = useState('');
@@ -80,6 +84,10 @@ export default function SettingsPage() {
           firstName: response.firstName || '',
           lastName: response.lastName || '',
           phone: response.phone || '',
+        });
+        setNotificationForm({
+          emailNotifications: response.emailNotifications ?? true,
+          smsNotifications: response.smsNotifications ?? false,
         });
         checkPasskeyStatus();
       } catch (err) {
@@ -205,6 +213,30 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveNotifications = async () => {
+    setSavingNotifications(true);
+    setSuccessMessage('');
+    setError('');
+    try {
+      const apiCall = getApiCall();
+      const response = await apiCall<UserProfile>('/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(notificationForm),
+      });
+      setUser(response);
+      setNotificationForm({
+        emailNotifications: response.emailNotifications ?? true,
+        smsNotifications: response.smsNotifications ?? false,
+      });
+      setSuccessMessage('Notification preferences saved');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch {
+      setError('Failed to save notification preferences');
+    } finally {
+      setSavingNotifications(false);
+    }
+  };
+
   const handleVerifyPhoneOtp = async () => {
     setPhoneVerifying(true);
     setPhoneVerifyError('');
@@ -249,6 +281,15 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 mb-3 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Dashboard
+          </button>
           <h1 className="text-3xl font-bold text-black dark:text-white">Settings</h1>
           <p className="mt-2 text-zinc-600 dark:text-zinc-400">
             Manage your account settings and preferences
@@ -508,34 +549,41 @@ export default function SettingsPage() {
           <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-md p-6">
             <h2 className="text-lg font-semibold mb-4 text-black dark:text-white">Notification Settings</h2>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-md">
+              <label className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-md cursor-pointer">
                 <div>
                   <p className="font-medium text-black dark:text-white">Email Notifications</p>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
                     Receive email updates about your account
                   </p>
                 </div>
-                <button
-                  disabled
-                  className="px-4 py-2 bg-zinc-300 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-md text-sm"
-                >
-                  Configure
-                </button>
-              </div>
-              <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-md">
+                <input
+                  type="checkbox"
+                  checked={notificationForm.emailNotifications}
+                  onChange={(e) => setNotificationForm({ ...notificationForm, emailNotifications: e.target.checked })}
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                />
+              </label>
+              <label className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-md cursor-pointer">
                 <div>
                   <p className="font-medium text-black dark:text-white">SMS Notifications</p>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
                     Receive SMS updates on your phone
                   </p>
                 </div>
-                <button
-                  disabled
-                  className="px-4 py-2 bg-zinc-300 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-md text-sm"
-                >
-                  Configure
-                </button>
-              </div>
+                <input
+                  type="checkbox"
+                  checked={notificationForm.smsNotifications}
+                  onChange={(e) => setNotificationForm({ ...notificationForm, smsNotifications: e.target.checked })}
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                />
+              </label>
+              <button
+                onClick={handleSaveNotifications}
+                disabled={savingNotifications}
+                className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {savingNotifications ? 'Saving...' : 'Save Preferences'}
+              </button>
             </div>
           </div>
         )}

@@ -47,6 +47,13 @@ export class User {
   @Column({ name: 'phone_otp_attempts', type: 'int', default: 0, nullable: true })
   phoneOtpAttempts?: number;
 
+  // Notification preferences
+  @Column({ name: 'email_notifications', type: 'boolean', default: true, nullable: true })
+  emailNotifications?: boolean;
+
+  @Column({ name: 'sms_notifications', type: 'boolean', default: false, nullable: true })
+  smsNotifications?: boolean;
+
   // Passkey / WebAuthn fields
   @Column({ name: 'passkey_credential_id', nullable: true })
   passkeyCredentialId?: string;

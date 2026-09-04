@@ -14,6 +14,7 @@ import { CreateMatches1700000000007_5 } from './1700000000007-CreateMatches';
 import { AddMissingUserColumns1700000000009 } from './1700000000009-AddMissingUserColumns';
 import { CreateDeposits1700000000010 } from './1700000000010-CreateDeposits';
 import { AddPhoneOtpColumns1700000000011 } from './1700000000011-AddPhoneOtpColumns';
+import { AddNotificationPreferences1700000000012 } from './1700000000012-AddNotificationPreferences';
 import { AddLeadConsentAuditColumns1700000000012 } from './1700000000012-AddLeadConsentAuditColumns';
 import { CreateCrmTables1700000000013 } from './1700000000013-CreateCrmTables';
 
@@ -34,6 +35,7 @@ const migrations: MigrationConstructor[] = [
   AddMissingUserColumns1700000000009,
   CreateDeposits1700000000010,
   AddPhoneOtpColumns1700000000011,
+  AddNotificationPreferences1700000000012,
   AddLeadConsentAuditColumns1700000000012,
   CreateCrmTables1700000000013,
 ];

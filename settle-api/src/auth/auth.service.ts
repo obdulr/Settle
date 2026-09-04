@@ -434,6 +434,8 @@ export class AuthService {
       lastName: updateProfileDto.lastName,
       email: updateProfileDto.email,
       phone: updateProfileDto.phone,
+      emailNotifications: updateProfileDto.emailNotifications,
+      smsNotifications: updateProfileDto.smsNotifications,
       ...(phoneChanged ? { phoneVerified: false } : {}),
     });
 
