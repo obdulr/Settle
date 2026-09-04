@@ -12,6 +12,7 @@ import { Provider } from './entities/provider.entity';
 import { Lead } from './entities/lead.entity';
 import { Match } from './entities/match.entity';
 import { Budget } from './entities/budget.entity';
+import { RefreshToken } from './entities/refresh-token.entity';
 import { BudgetItem } from './entities/budget-item.entity';
 import { Goal } from './entities/goal.entity';
 import { CoachingSubscription } from './entities/coaching-subscription.entity';
@@ -49,14 +50,14 @@ import { BillingModule } from './billing/billing.module';
         idleTimeoutMillis: 30000,
         keepAlive: true,
       },
-      entities: [User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient],
+      entities: [User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient, RefreshToken],
       synchronize: false,
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
       retryAttempts: 5,
       retryDelay: 3000,
     }),
-    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient]),
+    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient, RefreshToken]),
     AuthModule,
     ActivitiesModule,
     DebtsModule,

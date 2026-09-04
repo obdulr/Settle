@@ -15,6 +15,7 @@ import { ActivitiesService } from '../activities/activities.service';
 import { EmailService } from '../email/email.service';
 import { TelnyxService } from './telnyx.service';
 import { FirebaseService } from '../firebase/firebase.service';
+import { RefreshToken } from '../entities/refresh-token.entity';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +26,8 @@ export class AuthService {
     private usersRepository: Repository<User>,
     @InjectRepository(Provider)
     private providersRepository: Repository<Provider>,
+    @InjectRepository(RefreshToken)
+    private refreshTokensRepository: Repository<RefreshToken>,
     private jwtService: JwtService,
     private activitiesService: ActivitiesService,
     private emailService: EmailService,
@@ -90,7 +93,7 @@ export class AuthService {
     return null;
   }
 
-  private async generateTokens(user: any) {
+  private async generateTokens(user: any, reqInfo?: { ipAddress?: string; userAgent?: string }) {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -112,15 +115,25 @@ export class AuthService {
       algorithm: 'HS256',
     });
 
+    // Store refresh token hash for session management
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const refreshTokenRecord = this.refreshTokensRepository.create({
+      userId: user.id,
+      tokenHash,
+      ipAddress: reqInfo?.ipAddress,
+      userAgent: reqInfo?.userAgent,
+    });
+    await this.refreshTokensRepository.save(refreshTokenRecord);
+
     return { accessToken, refreshToken, expiresIn: 60 * 60 }; // 1 hour in seconds
   }
 
   // Public method for passkey login (called from WebAuthnController)
-  async generateTokensForUser(user: any) {
-    return this.generateTokens(user);
+  async generateTokensForUser(user: any, reqInfo?: { ipAddress?: string; userAgent?: string }) {
+    return this.generateTokens(user, reqInfo);
   }
 
-  async login(user: any) {
+  async login(user: any, reqInfo?: { ipAddress?: string; userAgent?: string }) {
     // Customers must verify their email with an OTP before receiving tokens
     if (user.role !== 'provider' && !user.emailVerified) {
       const otpResult = await this.sendEmailOtp(user.email);
@@ -133,7 +146,7 @@ export class AuthService {
       };
     }
 
-    const tokens = await this.generateTokens(user);
+    const tokens = await this.generateTokens(user, reqInfo);
 
     // Log login activity (skip for providers — they don't have an activities table row)
     if (user.role !== 'provider') {
@@ -166,50 +179,95 @@ export class AuthService {
     };
   }
 
-  async refreshToken(refreshToken: string) {
+  async refreshToken(refreshToken: string, reqInfo?: { ipAddress?: string; userAgent?: string }) {
     try {
       const payload = this.jwtService.verify(refreshToken, {
         secret: process.env.JWT_REFRESH_SECRET,
         algorithms: ['HS256'],
       });
 
+      const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+      const storedToken = await this.refreshTokensRepository.findOne({
+        where: { tokenHash, userId: payload.sub },
+      });
+
+      if (!storedToken || storedToken.revokedAt) {
+        throw new UnauthorizedException('Invalid or revoked refresh token');
+      }
+
       // Look up the user to ensure they still exist and are valid
       const user = await this.usersRepository.findOne({ where: { id: payload.sub } });
-      if (!user) {
+      if (!user || user.deletedAt) {
         throw new UnauthorizedException('User not found');
       }
 
-      // Generate a new access token (1h)
-      const newAccessToken = this.jwtService.sign(
-        {
-          sub: user.id,
-          email: user.email,
-          role: user.role || 'customer',
-          firstName: user.firstName,
-          lastName: user.lastName,
-          phone: user.phone,
-        },
-        {
-          expiresIn: '1h',
-          secret: process.env.JWT_SECRET,
-          algorithm: 'HS256',
-        },
-      );
+      // Revoke the current refresh token and issue a new pair (rotation)
+      storedToken.revokedAt = new Date();
+      await this.refreshTokensRepository.save(storedToken);
+
+      const tokens = await this.generateTokens(user, reqInfo);
 
       return {
         success: true,
-        accessToken: newAccessToken,
-        expiresIn: 60 * 60, // 1 hour in seconds
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn,
       };
     } catch (err) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
 
-  async logout() {
-    // Full invalidation requires a token store (e.g. Redis blacklist).
-    // For now, return success — the client should discard both tokens.
+  async logout(refreshToken: string) {
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    await this.refreshTokensRepository.update({ tokenHash }, { revokedAt: new Date() });
     return { success: true, message: 'Logged out successfully' };
+  }
+
+  async getActiveSessions(userId: string) {
+    const sessions = await this.refreshTokensRepository.find({
+      where: { userId, revokedAt: null },
+      order: { createdAt: 'DESC' },
+    });
+
+    return sessions.map((session) => ({
+      id: session.id,
+      userAgent: session.userAgent,
+      ipAddress: session.ipAddress,
+      createdAt: session.createdAt,
+      isCurrent: false, // caller can override based on provided token
+    }));
+  }
+
+  async revokeSession(userId: string, sessionId: string) {
+    const session = await this.refreshTokensRepository.findOne({
+      where: { id: sessionId, userId },
+    });
+    if (!session) {
+      throw new BadRequestException('Session not found');
+    }
+    session.revokedAt = new Date();
+    await this.refreshTokensRepository.save(session);
+    return { success: true, message: 'Session revoked' };
+  }
+
+  async revokeAllOtherSessions(userId: string, currentRefreshToken: string) {
+    const currentTokenHash = crypto.createHash('sha256').update(currentRefreshToken).digest('hex');
+    const currentSession = await this.refreshTokensRepository.findOne({
+      where: { tokenHash: currentTokenHash, userId, revokedAt: null },
+    });
+
+    const currentSessionId = currentSession?.id;
+
+    await this.refreshTokensRepository.createQueryBuilder()
+      .update(RefreshToken)
+      .set({ revokedAt: new Date() })
+      .where('user_id = :userId', { userId })
+      .andWhere('revoked_at IS NULL')
+      .andWhere(currentSessionId ? 'id != :currentSessionId' : '1=1', currentSessionId ? { currentSessionId } : {})
+      .execute();
+
+    return { success: true, message: 'All other sessions logged out' };
   }
 
   async register(registerDto: RegisterDto) {

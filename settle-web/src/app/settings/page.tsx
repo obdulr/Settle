@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createJsonApiClient } from '@settle/shared-sdk/auth';
 import { startRegistration } from '@simplewebauthn/browser';
-import { getStoredToken, getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
+import { getStoredToken, getStoredRefreshToken, getStoredUser, clearAuth, isAuthenticated, storeRefreshToken } from '../../lib/authUtils';
 import FirebasePhoneVerify from '../../components/FirebasePhoneVerify';
 
 interface UserProfile {
@@ -43,6 +43,8 @@ export default function SettingsPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [sessions, setSessions] = useState<{ id: string; userAgent?: string; ipAddress?: string; createdAt: string; isCurrent: boolean }[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
 
   const checkPasskeyStatus = useCallback(async () => {
     try {
@@ -51,6 +53,20 @@ export default function SettingsPage() {
       setHasPasskey(res.hasPasskey);
     } catch {
       // Endpoint may not exist yet — silently ignore
+    }
+  }, []);
+
+  const fetchSessions = useCallback(async () => {
+    try {
+      setSessionsLoading(true);
+      const apiCall = getApiCall();
+      const res = await apiCall<{ sessions: { id: string; userAgent?: string; ipAddress?: string; createdAt: string }[] }>('/auth/sessions', { method: 'GET' });
+      // The most recent session is treated as the current one for UI purposes
+      setSessions((res.sessions || []).map((s, idx) => ({ ...s, isCurrent: idx === 0 })));
+    } catch {
+      setSessions([]);
+    } finally {
+      setSessionsLoading(false);
     }
   }, []);
 
@@ -103,7 +119,22 @@ export default function SettingsPage() {
     fetchProfile();
   }, [router]);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    if (activeTab === 'security') {
+      fetchSessions();
+    }
+  }, [activeTab, fetchSessions]);
+
+  const handleLogout = async () => {
+    const refreshToken = getStoredRefreshToken();
+    if (refreshToken) {
+      try {
+        const apiCall = getApiCall();
+        await apiCall('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) });
+      } catch {
+        // Non-blocking; clear local auth anyway
+      }
+    }
     clearAuth();
     router.push('/');
   };
@@ -242,6 +273,32 @@ export default function SettingsPage() {
       setDeleteConfirmOpen(false);
       setDeleteConfirmText('');
       setError('Failed to delete account. Please try again.');
+    }
+  };
+
+  const handleRevokeSession = async (sessionId: string) => {
+    try {
+      const apiCall = getApiCall();
+      await apiCall<{ success: boolean }>(`/auth/sessions/${sessionId}`, { method: 'DELETE' });
+      await fetchSessions();
+    } catch {
+      setError('Failed to revoke session. Please try again.');
+    }
+  };
+
+  const handleLogoutAllDevices = async () => {
+    const refreshToken = getStoredRefreshToken();
+    if (!refreshToken) {
+      clearAuth();
+      router.push('/login');
+      return;
+    }
+    try {
+      const apiCall = getApiCall();
+      await apiCall<{ success: boolean }>('/auth/sessions/others', { method: 'DELETE', body: JSON.stringify({ refreshToken }) });
+      await fetchSessions();
+    } catch {
+      setError('Failed to log out other devices. Please try again.');
     }
   };
 
@@ -534,19 +591,55 @@ export default function SettingsPage() {
                   <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{passkeyMessage}</p>
                 )}
               </div>
-              <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-md">
-                <div>
-                  <p className="font-medium text-black dark:text-white">Active Sessions</p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Manage your active login sessions
-                  </p>
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-md">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="font-medium text-black dark:text-white">Active Sessions</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Manage your active login sessions
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleLogoutAllDevices}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
+                  >
+                    Logout All Devices
+                  </button>
                 </div>
-                <button
-                  disabled
-                  className="px-4 py-2 bg-zinc-300 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 rounded-md text-sm"
-                >
-                  View
-                </button>
+
+                {sessionsLoading ? (
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading sessions...</p>
+                ) : sessions.length === 0 ? (
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">No active sessions found.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {sessions.map((session) => (
+                      <li key={session.id} className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-700">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-black dark:text-white truncate">
+                            {session.userAgent || 'Unknown device'}
+                            {session.isCurrent && (
+                              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                Current
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {session.ipAddress ? `${session.ipAddress} · ` : ''}{new Date(session.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        {!session.isCurrent && (
+                          <button
+                            onClick={() => handleRevokeSession(session.id)}
+                            className="ml-3 px-3 py-1 text-sm text-red-600 hover:text-red-800 dark:hover:text-red-400"
+                          >
+                            Revoke
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </div>

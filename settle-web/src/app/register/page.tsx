@@ -64,6 +64,7 @@ export default function RegisterPage() {
       const response = await apiCall<{
         success: boolean;
         accessToken?: string;
+        refreshToken?: string;
         user?: any;
         requiresVerification?: boolean;
         email?: string;
@@ -76,7 +77,7 @@ export default function RegisterPage() {
       });
 
       if (response.success && response.accessToken) {
-        storeAuth(response.accessToken, response.user);
+        storeAuth(response.accessToken, response.user, response.refreshToken);
         setInfo('Account created! You can now add a passkey for faster login.');
         router.push('/dashboard');
       } else if (response.success && response.requiresVerification && response.email) {
@@ -115,6 +116,7 @@ export default function RegisterPage() {
       const regRes = await apiCall<{
         success: boolean;
         accessToken?: string;
+        refreshToken?: string;
         user?: any;
         requiresVerification?: boolean;
         email?: string;
@@ -143,7 +145,7 @@ export default function RegisterPage() {
         return;
       }
 
-      storeAuth(regRes.accessToken, regRes.user);
+      storeAuth(regRes.accessToken, regRes.user, regRes.refreshToken);
 
       // Step 2: Get passkey registration options
       const optionsRes = await fetch(`${API_URL}/auth/passkey/register/options`, {

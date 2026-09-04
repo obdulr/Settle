@@ -32,7 +32,7 @@ export class WebAuthnController {
 
   // Step 2: Verify authentication response and issue JWT
   @Post('authenticate/verify')
-  async authVerify(@Body() body: { email: string; credential: any; challenge: string }) {
+  async authVerify(@Request() req, @Body() body: { email: string; credential: any; challenge: string }) {
     const result = await this.webauthnService.verifyAuthentication(
       body.email,
       body.credential,
@@ -44,7 +44,10 @@ export class WebAuthnController {
     }
 
     // Issue JWT tokens
-    const tokens = await this.authService.generateTokensForUser(result.user);
+    const tokens = await this.authService.generateTokensForUser(result.user, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
     return {
       success: true,
       ...tokens,

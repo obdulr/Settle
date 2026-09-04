@@ -76,6 +76,7 @@ export default function LoginPage() {
       const response = await apiCall<{
         success: boolean;
         accessToken?: string;
+        refreshToken?: string;
         user?: any;
         requiresVerification?: boolean;
         email?: string;
@@ -88,7 +89,7 @@ export default function LoginPage() {
       });
 
       if (response.success && response.accessToken) {
-        storeAuth(response.accessToken, response.user);
+        storeAuth(response.accessToken, response.user, response.refreshToken);
         router.push(response.user?.role === 'provider' ? '/portal' : '/dashboard');
       } else if (response.success && response.requiresVerification) {
         setMode('otp');
@@ -143,13 +144,13 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await apiCall<{ success: boolean; accessToken?: string; user?: any; error?: string }>('/auth/verify-otp', {
+      const response = await apiCall<{ success: boolean; accessToken?: string; refreshToken?: string; user?: any; error?: string }>('/auth/verify-otp', {
         method: 'POST',
         body: JSON.stringify({ email, code: otpCode }),
       });
 
       if (response.success && response.accessToken) {
-        storeAuth(response.accessToken, response.user);
+        storeAuth(response.accessToken, response.user, response.refreshToken);
         router.push(response.user?.role === 'provider' ? '/portal' : '/dashboard');
       } else {
         setError(response.error || 'Invalid code');
@@ -192,7 +193,7 @@ export default function LoginPage() {
       const result = await verifyRes.json();
 
       if (result.success) {
-        storeAuth(result.accessToken, result.user);
+        storeAuth(result.accessToken, result.user, result.refreshToken);
         router.push(result.user?.role === 'provider' ? '/portal' : '/dashboard');
       } else {
         setError(result.error || 'Passkey authentication failed');

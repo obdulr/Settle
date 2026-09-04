@@ -18,6 +18,7 @@ import { AddNotificationPreferences1700000000012 } from './1700000000012-AddNoti
 import { AddLeadConsentAuditColumns1700000000012 } from './1700000000012-AddLeadConsentAuditColumns';
 import { CreateCrmTables1700000000013 } from './1700000000013-CreateCrmTables';
 import { AddUserDeletedAt1700000000014 } from './1700000000014-AddUserDeletedAt';
+import { CreateRefreshTokens1700000000015 } from './1700000000015-CreateRefreshTokens';
 
 type MigrationConstructor = new () => MigrationInterface;
 
@@ -40,6 +41,7 @@ const migrations: MigrationConstructor[] = [
   AddLeadConsentAuditColumns1700000000012,
   CreateCrmTables1700000000013,
   AddUserDeletedAt1700000000014,
+  CreateRefreshTokens1700000000015,
 ];
 
 async function ensureMigrationsTable(queryRunner: QueryRunner): Promise<void> {

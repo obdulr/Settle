@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, UsePipes, ValidationPipe, Put, Delete } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, UsePipes, ValidationPipe, Put, Delete, Param } from '@nestjs/common';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
@@ -18,19 +18,25 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute for login
   @Post('login')
   async login(@Request() req) {
-    return this.authService.login(req.user);
+    return this.authService.login(req.user, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
   }
 
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 refreshes per minute
   @Post('refresh')
-  async refreshToken(@Body() body: { refreshToken: string }) {
-    return this.authService.refreshToken(body.refreshToken);
+  async refreshToken(@Request() req, @Body() body: { refreshToken: string }) {
+    return this.authService.refreshToken(body.refreshToken, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
   }
 
   @SkipThrottle()
   @Post('logout')
-  async logout() {
-    return this.authService.logout();
+  async logout(@Body() body: { refreshToken: string }) {
+    return this.authService.logout(body.refreshToken);
   }
 
   @UsePipes(new ValidationPipe())
@@ -86,6 +92,24 @@ export class AuthController {
   @Delete('account')
   async deleteAccount(@Request() req) {
     return this.authService.deleteAccount(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('sessions')
+  async getActiveSessions(@Request() req) {
+    return this.authService.getActiveSessions(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('sessions/others')
+  async revokeAllOtherSessions(@Request() req, @Body() body: { refreshToken: string }) {
+    return this.authService.revokeAllOtherSessions(req.user.sub, body.refreshToken);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('sessions/:id')
+  async revokeSession(@Request() req, @Param('id') sessionId: string) {
+    return this.authService.revokeSession(req.user.sub, sessionId);
   }
 
   // ============================================================

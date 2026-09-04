@@ -12,6 +12,7 @@ import { SmsAuthService } from './sms-auth.service';
 import { SmsAuthController } from './sms-auth.controller';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { User } from '../entities/user.entity';
+import { RefreshToken } from '../entities/refresh-token.entity';
 import { Provider } from '../entities/provider.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
@@ -20,7 +21,7 @@ import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Provider]),
+    TypeOrmModule.forFeature([User, Provider, RefreshToken]),
     PassportModule,
     ActivitiesModule,
     EmailModule,
