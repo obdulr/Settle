@@ -163,24 +163,12 @@ export default function SettingsPage() {
     setPasskeyMessage('');
     try {
       const apiCall = getApiCall();
-      const optionsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025'}/auth/passkey/register/options`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getStoredToken()}`,
-        },
-      });
-      const options = await optionsRes.json();
+      const options = await apiCall<any>('/auth/passkey/register/options', { method: 'POST' });
       const credential = await startRegistration({ optionsJSON: options });
-      const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025'}/auth/passkey/register/verify`, {
+      const result = await apiCall<{ verified: boolean }>('/auth/passkey/register/verify', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getStoredToken()}`,
-        },
         body: JSON.stringify({ credential, challenge: options.challenge }),
       });
-      const result = await verifyRes.json();
       if (result.verified) {
         setHasPasskey(true);
         setPasskeyMessage('Passkey registered successfully! You can now use it to log in.');
