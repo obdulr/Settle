@@ -9,6 +9,22 @@ import {
 } from '../entities/crm-lead.entity';
 import { CrmDeal, CrmDealStage, CrmDealStatus } from '../entities/crm-deal.entity';
 import { CrmClient, CrmClientStatus, CrmLifecycleStage } from '../entities/crm-client.entity';
+import { Creditor, CreditorType } from '../entities/creditor.entity';
+import {
+  ClientEnrollment,
+  EnrollmentStatus,
+  ProgramType,
+} from '../entities/client-enrollment.entity';
+import {
+  Settlement,
+  SettlementStatus,
+} from '../entities/settlement.entity';
+import { TrustAccount, TrustAccountStatus } from '../entities/trust-account.entity';
+import {
+  SettlementPayment,
+  SettlementPaymentType,
+  SettlementPaymentStatus,
+} from '../entities/settlement-payment.entity';
 
 export interface CrmData {
   leads: CrmLead[];
@@ -105,6 +121,16 @@ export class CrmService {
     private readonly dealRepository: Repository<CrmDeal>,
     @InjectRepository(CrmClient)
     private readonly clientRepository: Repository<CrmClient>,
+    @InjectRepository(Creditor)
+    private readonly creditorRepository: Repository<Creditor>,
+    @InjectRepository(ClientEnrollment)
+    private readonly enrollmentRepository: Repository<ClientEnrollment>,
+    @InjectRepository(Settlement)
+    private readonly settlementRepository: Repository<Settlement>,
+    @InjectRepository(TrustAccount)
+    private readonly trustAccountRepository: Repository<TrustAccount>,
+    @InjectRepository(SettlementPayment)
+    private readonly paymentRepository: Repository<SettlementPayment>,
   ) {}
 
   // ---------- Lead operations ----------
@@ -439,5 +465,512 @@ export class CrmService {
     if (groupId) where.groupId = groupId;
     else where.groupId = IsNull();
     return this.leadRepository.findOne({ where });
+  }
+
+  // ===========================================================================
+  // DEBT SETTLEMENT — Creditor Management
+  // ===========================================================================
+
+  async listCreditors(groupId?: string, type?: CreditorType): Promise<Creditor[]> {
+    const where: Record<string, unknown> = {};
+    if (groupId) where.groupId = groupId;
+    if (type) where.type = type;
+    return this.creditorRepository.find({ where, order: { name: 'ASC' } });
+  }
+
+  async getCreditor(creditorId: string): Promise<Creditor> {
+    const creditor = await this.creditorRepository.findOne({ where: { id: creditorId } });
+    if (!creditor) throw new NotFoundException(`Creditor ${creditorId} not found`);
+    return creditor;
+  }
+
+  async createCreditor(input: Partial<Creditor>): Promise<Creditor> {
+    const creditor = this.creditorRepository.create(input);
+    const saved = await this.creditorRepository.save(creditor);
+    this.logger.log(`Created creditor ${saved.id} — ${saved.name}`);
+    return saved;
+  }
+
+  async updateCreditor(creditorId: string, updates: Partial<Creditor>): Promise<Creditor> {
+    const creditor = await this.getCreditor(creditorId);
+    Object.assign(creditor, updates);
+    return this.creditorRepository.save(creditor);
+  }
+
+  // ===========================================================================
+  // DEBT SETTLEMENT — Client Enrollment
+  // ===========================================================================
+
+  async listEnrollments(
+    clientId?: string,
+    status?: EnrollmentStatus,
+    groupId?: string,
+  ): Promise<ClientEnrollment[]> {
+    const where: Record<string, unknown> = {};
+    if (clientId) where.clientId = clientId;
+    if (status) where.status = status;
+    if (groupId) where.groupId = groupId;
+    return this.enrollmentRepository.find({ where, order: { createdAt: 'DESC' } });
+  }
+
+  async getEnrollment(enrollmentId: string): Promise<ClientEnrollment> {
+    const enrollment = await this.enrollmentRepository.findOne({ where: { id: enrollmentId } });
+    if (!enrollment) throw new NotFoundException(`Enrollment ${enrollmentId} not found`);
+    return enrollment;
+  }
+
+  async createEnrollment(input: {
+    clientId: string;
+    userId: string;
+    programType?: ProgramType;
+    totalEnrolledDebt: number;
+    estimatedSettlementAmount: number;
+    monthlyProgramPayment: number;
+    programLengthMonths: number;
+    settlementFeePercent?: number;
+    enrolledDebtIds?: string[];
+    groupId?: string;
+    assignedTo?: string;
+    notes?: string;
+  }): Promise<ClientEnrollment> {
+    const totalFees =
+      Number(input.estimatedSettlementAmount) *
+      (Number(input.settlementFeePercent ?? 20) / 100);
+
+    const enrollment = this.enrollmentRepository.create({
+      clientId: input.clientId,
+      userId: input.userId,
+      programType: input.programType ?? ProgramType.DEBT_SETTLEMENT,
+      status: EnrollmentStatus.PENDING,
+      totalEnrolledDebt: input.totalEnrolledDebt,
+      estimatedSettlementAmount: input.estimatedSettlementAmount,
+      monthlyProgramPayment: input.monthlyProgramPayment,
+      programLengthMonths: input.programLengthMonths,
+      settlementFeePercent: input.settlementFeePercent ?? 20,
+      totalFeesEstimated: totalFees,
+      enrolledDebtIds: input.enrolledDebtIds ?? [],
+      totalAccountsEnrolled: input.enrolledDebtIds?.length ?? 0,
+      groupId: input.groupId,
+      assignedTo: input.assignedTo,
+      notes: input.notes,
+    });
+
+    const saved = await this.enrollmentRepository.save(enrollment);
+    this.logger.log(`Created enrollment ${saved.id} for client ${input.clientId}`);
+    return saved;
+  }
+
+  async activateEnrollment(enrollmentId: string): Promise<ClientEnrollment> {
+    const enrollment = await this.getEnrollment(enrollmentId);
+    enrollment.status = EnrollmentStatus.ACTIVE;
+    enrollment.enrollmentDate = new Date();
+    const completion = new Date();
+    completion.setMonth(completion.getMonth() + enrollment.programLengthMonths);
+    enrollment.expectedCompletionDate = completion;
+    this.logger.log(`Activated enrollment ${enrollmentId}`);
+    return this.enrollmentRepository.save(enrollment);
+  }
+
+  async completeEnrollment(enrollmentId: string): Promise<ClientEnrollment> {
+    const enrollment = await this.getEnrollment(enrollmentId);
+    enrollment.status = EnrollmentStatus.COMPLETED;
+    enrollment.actualCompletionDate = new Date();
+    this.logger.log(`Completed enrollment ${enrollmentId}`);
+    return this.enrollmentRepository.save(enrollment);
+  }
+
+  async cancelEnrollment(enrollmentId: string, reason?: string): Promise<ClientEnrollment> {
+    const enrollment = await this.getEnrollment(enrollmentId);
+    enrollment.status = EnrollmentStatus.CANCELLED;
+    if (reason) enrollment.notes = `${enrollment.notes ?? ''}\nCancelled: ${reason}`.trim();
+    return this.enrollmentRepository.save(enrollment);
+  }
+
+  // ===========================================================================
+  // DEBT SETTLEMENT — Settlement Negotiations
+  // ===========================================================================
+
+  async listSettlements(
+    enrollmentId?: string,
+    clientId?: string,
+    status?: SettlementStatus,
+    groupId?: string,
+  ): Promise<Settlement[]> {
+    const where: Record<string, unknown> = {};
+    if (enrollmentId) where.enrollmentId = enrollmentId;
+    if (clientId) where.clientId = clientId;
+    if (status) where.status = status;
+    if (groupId) where.groupId = groupId;
+    return this.settlementRepository.find({ where, order: { createdAt: 'DESC' } });
+  }
+
+  async getSettlement(settlementId: string): Promise<Settlement> {
+    const settlement = await this.settlementRepository.findOne({ where: { id: settlementId } });
+    if (!settlement) throw new NotFoundException(`Settlement ${settlementId} not found`);
+    return settlement;
+  }
+
+  async createSettlement(input: {
+    enrollmentId: string;
+    clientId: string;
+    creditorId: string;
+    debtId?: string;
+    accountNumber?: string;
+    originalBalance: number;
+    currentBalance: number;
+    offeredAmount: number;
+    groupId?: string;
+    assignedTo?: string;
+  }): Promise<Settlement> {
+    const settlementPercent =
+      Number(input.currentBalance) > 0
+        ? (Number(input.offeredAmount) / Number(input.currentBalance)) * 100
+        : 0;
+
+    const settlement = this.settlementRepository.create({
+      enrollmentId: input.enrollmentId,
+      clientId: input.clientId,
+      creditorId: input.creditorId,
+      debtId: input.debtId,
+      accountNumber: input.accountNumber,
+      originalBalance: input.originalBalance,
+      currentBalance: input.currentBalance,
+      offeredAmount: input.offeredAmount,
+      settlementPercent: Math.round(settlementPercent * 100) / 100,
+      status: SettlementStatus.PENDING,
+      negotiationHistory: [{
+        date: new Date(),
+        action: 'settlement_created',
+        amount: Number(input.offeredAmount),
+        by: input.assignedTo ?? 'system',
+        notes: 'Initial settlement offer prepared',
+      }],
+      groupId: input.groupId,
+      assignedTo: input.assignedTo,
+    });
+
+    const saved = await this.settlementRepository.save(settlement);
+    this.logger.log(`Created settlement ${saved.id} for client ${input.clientId}`);
+    return saved;
+  }
+
+  async makeOffer(settlementId: string, amount: number, by: string, notes?: string): Promise<Settlement> {
+    const settlement = await this.getSettlement(settlementId);
+    settlement.offeredAmount = amount;
+    settlement.offerDate = new Date();
+    settlement.status = SettlementStatus.OFFER_MADE;
+    settlement.settlementPercent =
+      Number(settlement.currentBalance) > 0
+        ? Math.round((amount / Number(settlement.currentBalance)) * 10000) / 100
+        : 0;
+    settlement.negotiationHistory = [
+      ...(settlement.negotiationHistory ?? []),
+      { date: new Date(), action: 'offer_made', amount, by, notes },
+    ];
+    return this.settlementRepository.save(settlement);
+  }
+
+  async counterOffer(settlementId: string, amount: number, by: string, notes?: string): Promise<Settlement> {
+    const settlement = await this.getSettlement(settlementId);
+    settlement.status = SettlementStatus.COUNTER_OFFER;
+    settlement.negotiationHistory = [
+      ...(settlement.negotiationHistory ?? []),
+      { date: new Date(), action: 'counter_offer', amount, by, notes },
+    ];
+    return this.settlementRepository.save(settlement);
+  }
+
+  async acceptSettlement(settlementId: string, amount: number, by: string, notes?: string): Promise<Settlement> {
+    const settlement = await this.getSettlement(settlementId);
+    settlement.settlementAmount = amount;
+    settlement.acceptanceDate = new Date();
+    settlement.status = SettlementStatus.ACCEPTED;
+    settlement.settlementPercent =
+      Number(settlement.currentBalance) > 0
+        ? Math.round((amount / Number(settlement.currentBalance)) * 10000) / 100
+        : 0;
+    settlement.savingsAmount = Number(settlement.currentBalance) - amount;
+    settlement.savingsPercent =
+      Number(settlement.currentBalance) > 0
+        ? Math.round((settlement.savingsAmount / Number(settlement.currentBalance)) * 10000) / 100
+        : 0;
+    settlement.negotiationHistory = [
+      ...(settlement.negotiationHistory ?? []),
+      { date: new Date(), action: 'accepted', amount, by, notes },
+    ];
+    this.logger.log(`Settlement ${settlementId} accepted at ${amount} (${settlement.settlementPercent}% of balance)`);
+    return this.settlementRepository.save(settlement);
+  }
+
+  async approveSettlement(settlementId: string, approvedBy: string): Promise<Settlement> {
+    const settlement = await this.getSettlement(settlementId);
+    if (settlement.status !== SettlementStatus.ACCEPTED) {
+      throw new Error('Settlement must be in ACCEPTED status before approval');
+    }
+    settlement.status = SettlementStatus.APPROVED;
+    settlement.negotiationHistory = [
+      ...(settlement.negotiationHistory ?? []),
+      { date: new Date(), action: 'approved', by: approvedBy },
+    ];
+    return this.settlementRepository.save(settlement);
+  }
+
+  async fundSettlement(settlementId: string, fundedBy: string): Promise<Settlement> {
+    const settlement = await this.getSettlement(settlementId);
+    if (settlement.status !== SettlementStatus.APPROVED) {
+      throw new Error('Settlement must be APPROVED before funding');
+    }
+    settlement.status = SettlementStatus.FUNDED;
+    settlement.fundedDate = new Date();
+    settlement.daysToSettle = settlement.offerDate
+      ? Math.round((Date.now() - settlement.offerDate.getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+    settlement.negotiationHistory = [
+      ...(settlement.negotiationHistory ?? []),
+      { date: new Date(), action: 'funded', by: fundedBy },
+    ];
+
+    // Update enrollment totals
+    const enrollment = await this.getEnrollment(settlement.enrollmentId);
+    enrollment.totalSettledAmount = Number(enrollment.totalSettledAmount) + Number(settlement.settlementAmount);
+    enrollment.totalSavedAmount = Number(enrollment.totalSavedAmount) + Number(settlement.savingsAmount ?? 0);
+    enrollment.totalAccountsSettled += 1;
+    if (enrollment.totalAccountsSettled >= enrollment.totalAccountsEnrolled) {
+      enrollment.status = EnrollmentStatus.COMPLETED;
+      enrollment.actualCompletionDate = new Date();
+    }
+    await this.enrollmentRepository.save(enrollment);
+
+    return this.settlementRepository.save(settlement);
+  }
+
+  async rejectSettlement(settlementId: string, reason: string, by: string): Promise<Settlement> {
+    const settlement = await this.getSettlement(settlementId);
+    settlement.status = SettlementStatus.REJECTED;
+    settlement.negotiationHistory = [
+      ...(settlement.negotiationHistory ?? []),
+      { date: new Date(), action: 'rejected', by, notes: reason },
+    ];
+    return this.settlementRepository.save(settlement);
+  }
+
+  // ===========================================================================
+  // DEBT SETTLEMENT — Trust Account Management
+  // ===========================================================================
+
+  async getTrustAccount(clientId: string): Promise<TrustAccount | null> {
+    return this.trustAccountRepository.findOne({ where: { clientId } });
+  }
+
+  async createTrustAccount(input: {
+    clientId: string;
+    enrollmentId: string;
+    accountNumber?: string;
+    routingNumber?: string;
+    bankName?: string;
+    groupId?: string;
+  }): Promise<TrustAccount> {
+    const existing = await this.getTrustAccount(input.clientId);
+    if (existing) throw new Error(`Trust account already exists for client ${input.clientId}`);
+
+    const account = this.trustAccountRepository.create({
+      clientId: input.clientId,
+      enrollmentId: input.enrollmentId,
+      accountNumber: input.accountNumber,
+      routingNumber: input.routingNumber,
+      bankName: input.bankName,
+      status: TrustAccountStatus.ACTIVE,
+      openedDate: new Date(),
+      groupId: input.groupId,
+    });
+    const saved = await this.trustAccountRepository.save(account);
+    this.logger.log(`Created trust account ${saved.id} for client ${input.clientId}`);
+    return saved;
+  }
+
+  async getTrustAccountBalance(clientId: string): Promise<{
+    currentBalance: number;
+    totalDeposited: number;
+    totalWithdrawn: number;
+    totalFeesCollected: number;
+    totalSettlementsPaid: number;
+  }> {
+    const account = await this.getTrustAccount(clientId);
+    if (!account) {
+      return {
+        currentBalance: 0,
+        totalDeposited: 0,
+        totalWithdrawn: 0,
+        totalFeesCollected: 0,
+        totalSettlementsPaid: 0,
+      };
+    }
+    return {
+      currentBalance: Number(account.currentBalance),
+      totalDeposited: Number(account.totalDeposited),
+      totalWithdrawn: Number(account.totalWithdrawn),
+      totalFeesCollected: Number(account.totalFeesCollected),
+      totalSettlementsPaid: Number(account.totalSettlementsPaid),
+    };
+  }
+
+  // ===========================================================================
+  // DEBT SETTLEMENT — Settlement Payments
+  // ===========================================================================
+
+  async listPayments(
+    clientId?: string,
+    trustAccountId?: string,
+    settlementId?: string,
+    status?: SettlementPaymentStatus,
+    groupId?: string,
+  ): Promise<SettlementPayment[]> {
+    const where: Record<string, unknown> = {};
+    if (clientId) where.clientId = clientId;
+    if (trustAccountId) where.trustAccountId = trustAccountId;
+    if (settlementId) where.settlementId = settlementId;
+    if (status) where.status = status;
+    if (groupId) where.groupId = groupId;
+    return this.paymentRepository.find({ where, order: { createdAt: 'DESC' } });
+  }
+
+  async createPayment(input: {
+    trustAccountId: string;
+    clientId: string;
+    settlementId?: string;
+    creditorId?: string;
+    paymentType: SettlementPaymentType;
+    amount: number;
+    scheduledDate?: Date;
+    paymentMethod?: string;
+    notes?: string;
+    groupId?: string;
+  }): Promise<SettlementPayment> {
+    const payment = this.paymentRepository.create({
+      trustAccountId: input.trustAccountId,
+      clientId: input.clientId,
+      settlementId: input.settlementId,
+      creditorId: input.creditorId,
+      paymentType: input.paymentType,
+      amount: input.amount,
+      scheduledDate: input.scheduledDate,
+      paymentMethod: input.paymentMethod,
+      status: input.scheduledDate ? SettlementPaymentStatus.SCHEDULED : SettlementPaymentStatus.PENDING,
+      notes: input.notes,
+      groupId: input.groupId,
+    });
+    const saved = await this.paymentRepository.save(payment);
+    this.logger.log(`Created payment ${saved.id} — type=${input.paymentType}, amount=${input.amount}`);
+    return saved;
+  }
+
+  async processPayment(paymentId: string, approvedBy: string): Promise<SettlementPayment> {
+    const payment = await this.paymentRepository.findOne({ where: { id: paymentId } });
+    if (!payment) throw new NotFoundException(`Payment ${paymentId} not found`);
+
+    payment.status = SettlementPaymentStatus.PROCESSED;
+    payment.processedDate = new Date();
+    payment.approvedBy = approvedBy;
+    payment.approvedAt = new Date();
+
+    // Update trust account balances
+    const account = await this.trustAccountRepository.findOne({ where: { id: payment.trustAccountId } });
+    if (account) {
+      const amount = Number(payment.amount);
+      switch (payment.paymentType) {
+        case SettlementPaymentType.DEPOSIT:
+          account.currentBalance = Number(account.currentBalance) + amount;
+          account.totalDeposited = Number(account.totalDeposited) + amount;
+          break;
+        case SettlementPaymentType.SETTLEMENT_PAYMENT:
+          account.currentBalance = Number(account.currentBalance) - amount;
+          account.totalSettlementsPaid = Number(account.totalSettlementsPaid) + amount;
+          account.totalWithdrawn = Number(account.totalWithdrawn) + amount;
+          break;
+        case SettlementPaymentType.FEE_PAYMENT:
+          account.currentBalance = Number(account.currentBalance) - amount;
+          account.totalFeesCollected = Number(account.totalFeesCollected) + amount;
+          account.totalWithdrawn = Number(account.totalWithdrawn) + amount;
+          break;
+        case SettlementPaymentType.WITHDRAWAL:
+          account.currentBalance = Number(account.currentBalance) - amount;
+          account.totalWithdrawn = Number(account.totalWithdrawn) + amount;
+          break;
+        case SettlementPaymentType.REFUND:
+          account.currentBalance = Number(account.currentBalance) + amount;
+          break;
+      }
+      await this.trustAccountRepository.save(account);
+    }
+
+    this.logger.log(`Processed payment ${paymentId} — ${payment.paymentType}, $${payment.amount}`);
+    return this.paymentRepository.save(payment);
+  }
+
+  // ===========================================================================
+  // DEBT SETTLEMENT — Dashboard Analytics
+  // ===========================================================================
+
+  async getSettlementDashboard(groupId?: string): Promise<{
+    totalEnrolledDebt: number;
+ totalClients: number;
+    activeEnrollments: number;
+    completedEnrollments: number;
+    totalSettledAmount: number;
+    totalSavedAmount: number;
+    averageSavingsPercent: number;
+    activeSettlements: number;
+    pendingOffers: number;
+    trustAccountBalance: number;
+    totalFeesCollected: number;
+    recentSettlements: Settlement[];
+  }> {
+    const enrollmentWhere: Record<string, unknown> = {};
+    if (groupId) enrollmentWhere.groupId = groupId;
+
+    const enrollments = await this.enrollmentRepository.find({ where: enrollmentWhere });
+    const activeEnrollments = enrollments.filter((e) => e.status === EnrollmentStatus.ACTIVE);
+    const completedEnrollments = enrollments.filter((e) => e.status === EnrollmentStatus.COMPLETED);
+    const totalEnrolledDebt = enrollments.reduce((s, e) => s + Number(e.totalEnrolledDebt), 0);
+    const totalSettledAmount = enrollments.reduce((s, e) => s + Number(e.totalSettledAmount), 0);
+    const totalSavedAmount = enrollments.reduce((s, e) => s + Number(e.totalSavedAmount), 0);
+
+    const settlementWhere: Record<string, unknown> = {};
+    if (groupId) settlementWhere.groupId = groupId;
+    const settlements = await this.settlementRepository.find({ where: settlementWhere, order: { createdAt: 'DESC' }, take: 10 });
+    const allSettlements = await this.settlementRepository.find({ where: settlementWhere });
+    const activeSettlements = allSettlements.filter(
+      (s) => ![SettlementStatus.COMPLETED, SettlementStatus.CANCELLED, SettlementStatus.REJECTED].includes(s.status),
+    ).length;
+    const pendingOffers = allSettlements.filter(
+      (s) => s.status === SettlementStatus.OFFER_MADE || s.status === SettlementStatus.COUNTER_OFFER,
+    ).length;
+
+    const settledWithSavings = allSettlements.filter((s) => s.savingsPercent != null && s.status === SettlementStatus.COMPLETED);
+    const averageSavingsPercent =
+      settledWithSavings.length > 0
+        ? settledWithSavings.reduce((s, r) => s + Number(r.savingsPercent), 0) / settledWithSavings.length
+        : 0;
+
+    const trustWhere: Record<string, unknown> = {};
+    if (groupId) trustWhere.groupId = groupId;
+    const trustAccounts = await this.trustAccountRepository.find({ where: trustWhere });
+    const trustAccountBalance = trustAccounts.reduce((s, a) => s + Number(a.currentBalance), 0);
+    const totalFeesCollected = trustAccounts.reduce((s, a) => s + Number(a.totalFeesCollected), 0);
+
+    return {
+      totalEnrolledDebt,
+      totalClients: new Set(enrollments.map((e) => e.clientId)).size,
+      activeEnrollments: activeEnrollments.length,
+      completedEnrollments: completedEnrollments.length,
+      totalSettledAmount,
+      totalSavedAmount,
+      averageSavingsPercent: Math.round(averageSavingsPercent * 10) / 10,
+      activeSettlements,
+      pendingOffers,
+      trustAccountBalance,
+      totalFeesCollected,
+      recentSettlements: settlements,
+    };
   }
 }

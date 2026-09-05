@@ -19,6 +19,22 @@ import { CoachingSubscription } from './entities/coaching-subscription.entity';
 import { CrmLead } from './entities/crm-lead.entity';
 import { CrmDeal } from './entities/crm-deal.entity';
 import { CrmClient } from './entities/crm-client.entity';
+import { Creditor } from './entities/creditor.entity';
+import { ClientEnrollment } from './entities/client-enrollment.entity';
+import { Settlement } from './entities/settlement.entity';
+import { TrustAccount } from './entities/trust-account.entity';
+import { SettlementPayment } from './entities/settlement-payment.entity';
+import { LeadRoutingRule } from './entities/lead-routing-rule.entity';
+import { LeadAssignment } from './entities/lead-assignment.entity';
+import { DncEntry } from './entities/dnc-entry.entity';
+import { ConsentLog } from './entities/consent-log.entity';
+import { CommunicationLog } from './entities/communication-log.entity';
+import { CrmTask } from './entities/crm-task.entity';
+import { WorkflowRule } from './entities/workflow-rule.entity';
+import { WorkflowExecution } from './entities/workflow-execution.entity';
+import { CrmNotification } from './entities/crm-notification.entity';
+import { Milestone } from './entities/milestone.entity';
+import { CrmDocument } from './entities/crm-document.entity';
 import { AuthModule } from './auth/auth.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { DebtsModule } from './debts/debts.module';
@@ -50,14 +66,14 @@ import { BillingModule } from './billing/billing.module';
         idleTimeoutMillis: 30000,
         keepAlive: true,
       },
-      entities: [User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient, RefreshToken],
+      entities: [User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient, Creditor, ClientEnrollment, Settlement, TrustAccount, SettlementPayment, LeadRoutingRule, LeadAssignment, DncEntry, ConsentLog, CommunicationLog, CrmTask, WorkflowRule, WorkflowExecution, CrmNotification, Milestone, CrmDocument, RefreshToken],
       synchronize: false,
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
       retryAttempts: 5,
       retryDelay: 3000,
     }),
-    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient, RefreshToken]),
+    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient, Creditor, ClientEnrollment, Settlement, TrustAccount, SettlementPayment, LeadRoutingRule, LeadAssignment, DncEntry, ConsentLog, CommunicationLog, CrmTask, WorkflowRule, WorkflowExecution, CrmNotification, Milestone, CrmDocument, RefreshToken]),
     AuthModule,
     ActivitiesModule,
     DebtsModule,

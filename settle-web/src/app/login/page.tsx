@@ -175,6 +175,10 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email || undefined }),
       });
+      if (!optionsRes.ok) {
+        setError('Server error during passkey authentication. Please try again later.');
+        return;
+      }
       const options = await optionsRes.json();
 
       // Step 2: Start browser authentication (Touch ID, Face ID, security key, etc.)
@@ -195,14 +199,20 @@ export default function LoginPage() {
       if (result.success) {
         storeAuth(result.accessToken, result.user, result.refreshToken);
         router.push(result.user?.role === 'provider' ? '/portal' : '/dashboard');
+      } else if (result.error?.includes('No passkey registered')) {
+        setError('No passkey found for this email. Register a passkey from your account settings first, or use password/OTP login.');
+      } else if (result.error?.includes('challenge mismatch')) {
+        setError('Passkey session expired. Please try again.');
       } else {
         setError(result.error || 'Passkey authentication failed');
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'NotAllowedError') {
-        setError('Passkey authentication was cancelled or not available');
+        setError('Passkey authentication was cancelled or not available on this device.');
+      } else if (err instanceof Error && err.message?.includes('No matching')) {
+        setError('No matching passkey found. Register a passkey first, or try a different login method.');
       } else {
-        setError('Passkey authentication failed. Make sure you have a passkey registered.');
+        setError('Passkey authentication failed. Make sure you have a passkey registered, or try password login.');
       }
     } finally {
       setLoading(false);
