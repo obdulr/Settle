@@ -21,6 +21,7 @@ import { AddUserDeletedAt1700000000014 } from './1700000000014-AddUserDeletedAt'
 import { CreateRefreshTokens1700000000015 } from './1700000000015-CreateRefreshTokens';
 import { AddUserSecurityColumns1700000000016 } from './1700000000016-AddUserSecurityColumns';
 import { CreateDebtSettlementCrmTables1700000000017 } from './1700000000017-CreateDebtSettlementCrmTables';
+import { AddProviderStripeColumns1700000000018 } from './1700000000018-AddProviderStripeColumns';
 
 type MigrationConstructor = new () => MigrationInterface;
 
@@ -46,6 +47,7 @@ const migrations: MigrationConstructor[] = [
   CreateRefreshTokens1700000000015,
   AddUserSecurityColumns1700000000016,
   CreateDebtSettlementCrmTables1700000000017,
+  AddProviderStripeColumns1700000000018,
 ];
 
 async function ensureMigrationsTable(queryRunner: QueryRunner): Promise<void> {
