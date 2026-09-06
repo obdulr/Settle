@@ -119,4 +119,17 @@ export class Lead {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
+
+  // Sales / CRM
+  @Column({ type: 'uuid', name: 'sales_agent_id', nullable: true })
+  salesAgentId?: string;
+
+  @Column({ type: 'text', name: 'sales_notes', nullable: true })
+  salesNotes?: string;
+
+  @Column({ type: 'timestamp', name: 'converted_at', nullable: true })
+  convertedAt?: Date;
+
+  @Column({ type: 'timestamp', name: 'sales_agent_assigned_at', nullable: true })
+  salesAgentAssignedAt?: Date;
 }

@@ -47,6 +47,7 @@ import { AiModule } from './ai/ai.module';
 import { CoachingModule } from './coaching/coaching.module';
 import { CrmModule } from './crm/crm.module';
 import { BillingModule } from './billing/billing.module';
+import { SalesModule } from './sales/sales.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { BillingModule } from './billing/billing.module';
     CoachingModule,
     CrmModule,
     BillingModule,
+    SalesModule,
   ],
   controllers: [AppController],
   providers: [

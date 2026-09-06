@@ -66,6 +66,13 @@ export default function LoginPage() {
     },
   });
 
+  const redirectByRole = (role?: string) => {
+    if (role === 'admin') return '/admin';
+    if (role === 'sales') return '/sales';
+    if (role === 'provider') return '/portal';
+    return '/dashboard';
+  };
+
   // -- Password login --
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +97,7 @@ export default function LoginPage() {
 
       if (response.success && response.accessToken) {
         storeAuth(response.accessToken, response.user, response.refreshToken);
-        router.push(response.user?.role === 'provider' ? '/portal' : '/dashboard');
+        router.push(redirectByRole(response.user?.role));
       } else if (response.success && response.requiresVerification) {
         setMode('otp');
         setOtpSent(true);
@@ -151,7 +158,7 @@ export default function LoginPage() {
 
       if (response.success && response.accessToken) {
         storeAuth(response.accessToken, response.user, response.refreshToken);
-        router.push(response.user?.role === 'provider' ? '/portal' : '/dashboard');
+        router.push(redirectByRole(response.user?.role));
       } else {
         setError(response.error || 'Invalid code');
       }
@@ -198,7 +205,7 @@ export default function LoginPage() {
 
       if (result.success) {
         storeAuth(result.accessToken, result.user, result.refreshToken);
-        router.push(result.user?.role === 'provider' ? '/portal' : '/dashboard');
+        router.push(redirectByRole(result.user?.role));
       } else if (result.error?.includes('No passkey registered')) {
         setError('No passkey found for this email. Register a passkey from your account settings first, or use password/OTP login.');
       } else if (result.error?.includes('challenge mismatch')) {

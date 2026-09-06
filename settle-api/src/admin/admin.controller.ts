@@ -13,6 +13,8 @@ import { AdminService } from './admin.service';
 import { AdjustProviderCreditsDto } from './dto/adjust-provider-credits.dto';
 import { ManualAssignLeadDto } from './dto/manual-assign-lead.dto';
 import { RejectProviderDto } from './dto/reject-provider.dto';
+import { CreateSalesAgentDto } from './dto/create-sales-agent.dto';
+import { AssignToSalesDto } from './dto/assign-to-sales.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -91,5 +93,26 @@ export class AdminController {
     const p = page ? parseInt(page, 10) : 1;
     const l = limit ? parseInt(limit, 10) : 20;
     return this.adminService.getAllMatches(p, l);
+  }
+
+  /** List sales agents. */
+  @Get('sales-agents')
+  async getSalesAgents() {
+    return this.adminService.getSalesAgents();
+  }
+
+  /** Create a sales agent. */
+  @Post('sales-agents')
+  async createSalesAgent(@Body() body: CreateSalesAgentDto) {
+    return this.adminService.createSalesAgent(body);
+  }
+
+  /** Assign a lead to a sales agent. */
+  @Post('leads/:id/assign-to-sales')
+  async assignLeadToSales(
+    @Param('id') id: string,
+    @Body() body: AssignToSalesDto,
+  ) {
+    return this.adminService.assignLeadToSales(id, body.salesAgentId);
   }
 }

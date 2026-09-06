@@ -9,6 +9,7 @@ import { Repository, FindManyOptions } from 'typeorm';
 import { Provider } from '../entities/provider.entity';
 import { Lead } from '../entities/lead.entity';
 import { Match } from '../entities/match.entity';
+import { User } from '../entities/user.entity';
 import { EmailService } from '../email/email.service';
 import { MatchingService } from '../matching/matching.service';
 
@@ -25,6 +26,8 @@ export class AdminService {
     private leadsRepository: Repository<Lead>,
     @InjectRepository(Match)
     private matchesRepository: Repository<Match>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
     private emailService: EmailService,
     private matchingService: MatchingService,
   ) {}
@@ -195,6 +198,54 @@ export class AdminService {
   /** Admin: view all matches with pagination. */
   async getAllMatches(page = 1, limit = 20) {
     return this.matchingService.getAllMatches(page, limit);
+  }
+
+  // --- sales agents ---
+
+  /** List all sales agents. */
+  async getSalesAgents() {
+    return this.usersRepository.find({
+      where: { role: 'sales' },
+      order: { createdAt: 'DESC' },
+      select: ['id', 'email', 'firstName', 'lastName', 'phone', 'createdAt'],
+    });
+  }
+
+  /** Create a sales agent user. */
+  async createSalesAgent(body: { email: string; password: string; firstName?: string; lastName?: string; phone?: string }) {
+    const existing = await this.usersRepository.findOne({ where: { email: body.email } });
+    if (existing) throw new BadRequestException('Email already in use');
+
+    const bcrypt = await import('bcrypt');
+    const passwordHash = await bcrypt.hash(body.password, 10);
+    const user = this.usersRepository.create({
+      email: body.email,
+      password: passwordHash,
+      firstName: body.firstName,
+      lastName: body.lastName,
+      phone: body.phone,
+      role: 'sales',
+      emailVerified: true,
+    });
+    const saved = await this.usersRepository.save(user);
+    const { password: _, ...result } = saved;
+    return result;
+  }
+
+  /** Assign a lead to a sales agent. */
+  async assignLeadToSales(leadId: string, salesAgentId: string) {
+    const lead = await this.leadsRepository.findOne({ where: { id: leadId } });
+    if (!lead) throw new NotFoundException('Lead not found');
+    const agent = await this.usersRepository.findOne({ where: { id: salesAgentId, role: 'sales' } });
+    if (!agent) throw new NotFoundException('Sales agent not found');
+
+    await this.leadsRepository.update(leadId, {
+      salesAgentId,
+      salesAgentAssignedAt: new Date(),
+      status: 'new',
+    });
+    this.logger.log(`Lead ${leadId} assigned to sales agent ${salesAgentId}`);
+    return this.leadsRepository.findOne({ where: { id: leadId } });
   }
 
   // --- helpers ---
