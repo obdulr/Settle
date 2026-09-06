@@ -1,22 +1,69 @@
 import { createJsonApiClient } from '@settle/shared-sdk/auth';
-import { clearAuth } from './authUtils';
-import { getToken } from './auth';
+import { clearAuth, getStoredRefreshToken, storeRefreshToken } from './authUtils';
+import { getToken, setToken } from './auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.settleinpeace.com';
 
 type ApiData = Record<string, unknown>;
 
+let refreshingPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = getStoredRefreshToken();
+  if (!refreshToken) return null;
+
+  if (refreshingPromise) return refreshingPromise;
+
+  refreshingPromise = (async () => {
+    try {
+      const response = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!response.ok) throw new Error('Refresh failed');
+      const data = await response.json();
+      if (!data.accessToken) throw new Error('No access token returned');
+      setToken(data.accessToken);
+      if (data.refreshToken) storeRefreshToken(data.refreshToken);
+      return data.accessToken as string;
+    } catch {
+      clearAuth();
+      return null;
+    } finally {
+      refreshingPromise = null;
+    }
+  })();
+
+  return refreshingPromise;
+}
+
 function api(token?: string) {
   return createJsonApiClient({
     getBaseUrl: () => API_URL,
     getToken: () => token ?? getToken(),
-    onUnauthorized: clearAuth,
+    onUnauthorized: () => {}, // handled by authenticatedApi wrapper
   });
 }
 
 function authenticatedApi(token: string) {
   if (!token) throw new Error('You must be signed in to access this resource.');
-  return api(token);
+  const client = api(token);
+  return async function jsonApiCallWithRefresh<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    try {
+      return await client<T>(endpoint, options);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'Unauthorized') {
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          return await api()<T>(endpoint, options);
+        }
+      }
+      clearAuth();
+      if (typeof window !== 'undefined') window.location.href = '/login';
+      throw err;
+    }
+  };
 }
 
 // Auth
