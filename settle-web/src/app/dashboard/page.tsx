@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createJsonApiClient } from '@settle/shared-sdk/auth';
-import { getStoredToken, getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
+import { getAuthenticatedApi } from '../../lib/api';
+import { getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
 import ComplianceDisclosure from '../../components/ComplianceDisclosure';
 
 interface UserProfile {
@@ -29,22 +29,8 @@ export default function DashboardPage() {
     }
 
     const fetchProfile = async () => {
-      const token = getStoredToken();
-      
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       try {
-        const apiCall = createJsonApiClient({
-          getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
-          getToken: () => token,
-          onUnauthorized: () => {
-            clearAuth();
-            router.push('/login');
-          },
-        });
+        const apiCall = getAuthenticatedApi();
 
         const response = await apiCall<UserProfile>('/auth/profile', {
           method: 'GET',

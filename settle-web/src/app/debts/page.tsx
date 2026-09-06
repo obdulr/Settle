@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createJsonApiClient } from '@settle/shared-sdk/auth';
-import { getStoredToken, isAuthenticated, clearAuth } from '../../lib/authUtils';
+import { getAuthenticatedApi } from '../../lib/api';
+import { isAuthenticated } from '../../lib/authUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 
@@ -47,14 +47,7 @@ export default function DebtsPage() {
     notes: '',
   });
 
-  const getApiCall = () => {
-    const token = getStoredToken();
-    return createJsonApiClient({
-      getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
-      getToken: () => token,
-      onUnauthorized: () => { clearAuth(); router.push('/login'); },
-    });
-  };
+  const getApiCall = () => getAuthenticatedApi();
 
   const refreshDebts = async () => {
     const apiCall = getApiCall();
@@ -73,22 +66,8 @@ export default function DebtsPage() {
     }
 
     const fetchDebts = async () => {
-      const token = getStoredToken();
-      
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       try {
-        const apiCall = createJsonApiClient({
-          getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
-          getToken: () => token,
-          onUnauthorized: () => {
-            clearAuth();
-            router.push('/login');
-          },
-        });
+        const apiCall = getAuthenticatedApi();
 
         const [debtsData, summaryData] = await Promise.all([
           apiCall<Debt[]>('/debts', { method: 'GET' }),

@@ -66,7 +66,9 @@ function authenticatedApi(token: string) {
   };
 }
 
-// Auth
+export function getAuthenticatedApi() {
+  return authenticatedApi(getToken() ?? '');
+}
 export function login(email: string, password: string) {
   return api()<ApiData>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
 }

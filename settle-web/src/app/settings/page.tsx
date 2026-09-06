@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { createJsonApiClient } from '@settle/shared-sdk/auth';
 import { startRegistration } from '@simplewebauthn/browser';
-import { getStoredToken, getStoredRefreshToken, getStoredUser, clearAuth, isAuthenticated, storeRefreshToken } from '../../lib/authUtils';
+import { getAuthenticatedApi } from '../../lib/api';
+import { getStoredToken, getStoredRefreshToken, getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
 import FirebasePhoneVerify from '../../components/FirebasePhoneVerify';
 
 interface UserProfile {
@@ -77,22 +77,8 @@ export default function SettingsPage() {
     }
 
     const fetchProfile = async () => {
-      const token = getStoredToken();
-      
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       try {
-        const apiCall = createJsonApiClient({
-          getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
-          getToken: () => token,
-          onUnauthorized: () => {
-            clearAuth();
-            router.push('/login');
-          },
-        });
+        const apiCall = getAuthenticatedApi();
 
         const response = await apiCall<UserProfile>('/auth/profile', {
           method: 'GET',
@@ -139,14 +125,7 @@ export default function SettingsPage() {
     router.push('/');
   };
 
-  const getApiCall = () => {
-    const token = getStoredToken();
-    return createJsonApiClient({
-      getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
-      getToken: () => token,
-      onUnauthorized: () => { clearAuth(); router.push('/login'); },
-    });
-  };
+  const getApiCall = () => getAuthenticatedApi();
 
   const handleSaveProfile = async () => {
     setSaving(true);

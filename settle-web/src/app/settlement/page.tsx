@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createJsonApiClient } from '@settle/shared-sdk/auth';
-import { getStoredToken, getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
+import { getAuthenticatedApi } from '../../lib/api';
+import { getStoredUser, isAuthenticated } from '../../lib/authUtils';
 import ComplianceDisclosure from '../../components/ComplianceDisclosure';
 
 interface Enrollment {
@@ -65,22 +65,14 @@ export default function SettlementPage() {
   }, [router]);
 
   const fetchPortalData = async () => {
-    const token = getStoredToken();
     const user = getStoredUser();
-    if (!token || !user) {
+    if (!user) {
       router.push('/login');
       return;
     }
 
     try {
-      const apiCall = createJsonApiClient({
-        getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
-        getToken: () => token,
-        onUnauthorized: () => {
-          clearAuth();
-          router.push('/login');
-        },
-      });
+      const apiCall = getAuthenticatedApi();
 
       // Try to fetch enrollment data — if no enrollment, we show the CTA page
       try {
