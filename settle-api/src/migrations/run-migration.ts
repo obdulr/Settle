@@ -23,6 +23,11 @@ import { AddUserSecurityColumns1700000000016 } from './1700000000016-AddUserSecu
 import { CreateDebtSettlementCrmTables1700000000017 } from './1700000000017-CreateDebtSettlementCrmTables';
 import { AddProviderStripeColumns1700000000018 } from './1700000000018-AddProviderStripeColumns';
 import { AddSalesLeadColumns1700000000019 } from './1700000000019-AddSalesLeadColumns';
+import { CreateCollectionTables1700000000020 } from './1700000000020-CreateCollectionTables';
+import { CreateSkipTraceTables1700000000021 } from './1700000000021-CreateSkipTraceTables';
+import { CreateCallLogTables1700000000022 } from './1700000000022-CreateCallLogTables';
+import { CreateCreditReportTables1700000000023 } from './1700000000023-CreateCreditReportTables';
+import { CreateBackgroundCheckTables1700000000024 } from './1700000000024-CreateBackgroundCheckTables';
 
 type MigrationConstructor = new () => MigrationInterface;
 
@@ -50,6 +55,11 @@ const migrations: MigrationConstructor[] = [
   CreateDebtSettlementCrmTables1700000000017,
   AddProviderStripeColumns1700000000018,
   AddSalesLeadColumns1700000000019,
+  CreateCollectionTables1700000000020,
+  CreateSkipTraceTables1700000000021,
+  CreateCallLogTables1700000000022,
+  CreateCreditReportTables1700000000023,
+  CreateBackgroundCheckTables1700000000024,
 ];
 
 async function ensureMigrationsTable(queryRunner: QueryRunner): Promise<void> {

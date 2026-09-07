@@ -35,6 +35,13 @@ import { WorkflowExecution } from './entities/workflow-execution.entity';
 import { CrmNotification } from './entities/crm-notification.entity';
 import { Milestone } from './entities/milestone.entity';
 import { CrmDocument } from './entities/crm-document.entity';
+import { CollectionAccount } from './entities/collection-account.entity';
+import { DebtorProfile } from './entities/debtor-profile.entity';
+import { CollectionNote } from './entities/collection-note.entity';
+import { SkipTraceResult } from './entities/skip-trace-result.entity';
+import { CallLog } from './entities/call-log.entity';
+import { CreditReport } from './entities/credit-report.entity';
+import { BackgroundCheck } from './entities/background-check.entity';
 import { AuthModule } from './auth/auth.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { DebtsModule } from './debts/debts.module';
@@ -48,6 +55,7 @@ import { CoachingModule } from './coaching/coaching.module';
 import { CrmModule } from './crm/crm.module';
 import { BillingModule } from './billing/billing.module';
 import { SalesModule } from './sales/sales.module';
+import { CollectionsModule } from './collections/collections.module';
 
 @Module({
   imports: [
@@ -67,14 +75,14 @@ import { SalesModule } from './sales/sales.module';
         idleTimeoutMillis: 30000,
         keepAlive: true,
       },
-      entities: [User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient, Creditor, ClientEnrollment, Settlement, TrustAccount, SettlementPayment, LeadRoutingRule, LeadAssignment, DncEntry, ConsentLog, CommunicationLog, CrmTask, WorkflowRule, WorkflowExecution, CrmNotification, Milestone, CrmDocument, RefreshToken],
+      entities: [User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient, Creditor, ClientEnrollment, Settlement, TrustAccount, SettlementPayment, LeadRoutingRule, LeadAssignment, DncEntry, ConsentLog, CommunicationLog, CrmTask, WorkflowRule, WorkflowExecution, CrmNotification, Milestone, CrmDocument, RefreshToken, CollectionAccount, DebtorProfile, CollectionNote, SkipTraceResult, CallLog, CreditReport, BackgroundCheck],
       synchronize: false,
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
       retryAttempts: 5,
       retryDelay: 3000,
     }),
-    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient, Creditor, ClientEnrollment, Settlement, TrustAccount, SettlementPayment, LeadRoutingRule, LeadAssignment, DncEntry, ConsentLog, CommunicationLog, CrmTask, WorkflowRule, WorkflowExecution, CrmNotification, Milestone, CrmDocument, RefreshToken]),
+    TypeOrmModule.forFeature([User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription, CrmLead, CrmDeal, CrmClient, Creditor, ClientEnrollment, Settlement, TrustAccount, SettlementPayment, LeadRoutingRule, LeadAssignment, DncEntry, ConsentLog, CommunicationLog, CrmTask, WorkflowRule, WorkflowExecution, CrmNotification, Milestone, CrmDocument, RefreshToken, CollectionAccount, DebtorProfile, CollectionNote, SkipTraceResult, CallLog, CreditReport, BackgroundCheck]),
     AuthModule,
     ActivitiesModule,
     DebtsModule,
@@ -88,6 +96,7 @@ import { SalesModule } from './sales/sales.module';
     CrmModule,
     BillingModule,
     SalesModule,
+    CollectionsModule,
   ],
   controllers: [AppController],
   providers: [

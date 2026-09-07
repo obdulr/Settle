@@ -13,6 +13,13 @@ import { CrmLead } from './entities/crm-lead.entity';
 import { CrmDeal } from './entities/crm-deal.entity';
 import { CrmClient } from './entities/crm-client.entity';
 import { Deposit } from './entities/deposit.entity';
+import { CollectionAccount } from './entities/collection-account.entity';
+import { DebtorProfile } from './entities/debtor-profile.entity';
+import { CollectionNote } from './entities/collection-note.entity';
+import { SkipTraceResult } from './entities/skip-trace-result.entity';
+import { CallLog } from './entities/call-log.entity';
+import { CreditReport } from './entities/credit-report.entity';
+import { BackgroundCheck } from './entities/background-check.entity';
 
 export const dataSource = new DataSource({
   type: 'postgres',
@@ -38,6 +45,13 @@ export const dataSource = new DataSource({
     CrmDeal,
     CrmClient,
     Deposit,
+    CollectionAccount,
+    DebtorProfile,
+    CollectionNote,
+    SkipTraceResult,
+    CallLog,
+    CreditReport,
+    BackgroundCheck,
   ],
   synchronize: false,
   logging: process.env.NODE_ENV === 'development',

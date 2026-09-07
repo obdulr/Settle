@@ -61,10 +61,14 @@ export default function Navigation() {
   const roleItems: { href: string; label: string }[] = [];
   if (authenticated && user) {
     if (user.role === 'provider') roleItems.push({ href: '/portal', label: 'Provider Portal' });
-    if (user.role === 'sales') roleItems.push({ href: '/sales', label: 'Sales CRM' });
+    if (user.role === 'sales') {
+      roleItems.push({ href: '/sales', label: 'Sales CRM' });
+      roleItems.push({ href: '/collections', label: 'Collections' });
+    }
     if (user.role === 'admin') {
       roleItems.push({ href: '/admin', label: 'Admin' });
       roleItems.push({ href: '/admin/sales', label: 'Sales CRM' });
+      roleItems.push({ href: '/collections', label: 'Collections' });
     }
   }
 
