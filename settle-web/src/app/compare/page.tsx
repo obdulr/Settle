@@ -27,7 +27,6 @@ interface Provider {
   isIapdaMember: boolean;
   yearsInBusiness?: number;
   website?: string;
-  // Matching fields (present when fetched via /matching/recommended/:leadId)
   matchScore?: number;
   matchReasons?: string[];
 }
@@ -46,6 +45,42 @@ const STARS = (rating?: number) => {
     </span>
   );
 };
+
+const VETTING_CRITERIA = [
+  {
+    title: 'Transparent fees',
+    description: 'Providers must disclose setup costs, monthly fees, and success fees before enrollment. No hidden charges.',
+  },
+  {
+    title: 'AFCC / IAPDA membership',
+    description: 'We verify active membership with the American Fair Credit Council and IAPDA certifications.',
+  },
+  {
+    title: 'BBB & verified ratings',
+    description: 'Ratings, complaint history, and verified consumer reviews are factored into every profile.',
+  },
+  {
+    title: 'State licensing',
+    description: 'Providers must hold the required state licenses, registrations, and surety bonds where they operate.',
+  },
+  {
+    title: 'Proven success metrics',
+    description: 'Average savings percentage, settlement timeline, and program completion rates are tracked and disclosed.',
+  },
+  {
+    title: 'No bait-and-switch',
+    description: 'We audit marketing claims and compare them against real program terms and consumer outcomes.',
+  },
+];
+
+const DEBT_OPTIONS = [
+  { label: 'Under $7.5K', value: '5000' },
+  { label: '$7.5K – $15K', value: '10000' },
+  { label: '$15K – $25K', value: '20000' },
+  { label: '$25K – $50K', value: '35000' },
+  { label: '$50K – $100K', value: '75000' },
+  { label: 'Over $100K', value: '125000' },
+];
 
 export default function ComparePage() {
   return (
@@ -107,7 +142,7 @@ function CompareContent() {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.message || 'Failed to request contact');
       }
-      setRequestedIds(prev => new Set(prev).add(providerId));
+      setRequestedIds((prev) => new Set(prev).add(providerId));
     } catch (err: any) {
       setActionError(err.message || 'Something went wrong');
     } finally {
@@ -126,7 +161,6 @@ function CompareContent() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
-
         {/* Header */}
         <div className="text-center mb-10">
           <p className="text-sm text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide mb-2">
@@ -142,15 +176,6 @@ function CompareContent() {
           </p>
         </div>
 
-        {/* Differentiator callout */}
-        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-8 text-center">
-          <p className="text-blue-800 dark:text-blue-300 text-sm font-medium">
-            {isMatched
-              ? '🎯 These providers serve your state, handle your debt types, and accept your debt amount — request contact with the ones you like.'
-              : '💡 Unlike other sites, we show you real fees upfront. No hidden costs. No bait-and-switch.'}
-          </p>
-        </div>
-
         {actionError && (
           <div className="mb-6 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-300 text-sm">
             {actionError}
@@ -162,39 +187,109 @@ function CompareContent() {
           <div className="text-center py-20 text-zinc-500">Loading providers...</div>
         )}
 
-        {/* Empty state — no providers yet */}
+        {/* Waitlist / empty state — providers not available yet */}
         {!loading && providers.length === 0 && (
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-100 dark:border-zinc-800 p-12 text-center">
-            <div className="w-20 h-20 bg-blue-50 dark:bg-blue-950 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-black dark:text-white mb-3">
-              Our provider network is being built
-            </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto mb-2">
-              We're currently onboarding vetted debt relief providers. We'll notify you as soon as providers are available to match with your profile.
-            </p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto mb-8">
-              <Link href="/assessment" className="text-blue-600 dark:text-blue-400 underline hover:text-blue-700">
-                Take the free assessment
-              </Link>{' '}
-              to be first in line.
-            </p>
+          <div className="space-y-16">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-8 md:p-12 text-white text-center shadow-xl">
+              <h2 className="text-3xl md:text-4xl font-black mb-4">Our provider network is being built</h2>
+              <p className="text-blue-100 text-lg max-w-2xl mx-auto mb-8">
+                We're onboarding vetted debt relief providers now. Take the free assessment to be first in line when side-by-side comparisons go live.
+              </p>
 
-            <Link
-              href="/providers"
-              className="inline-block px-8 py-3 border-2 border-blue-600 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950 transition-all"
-            >
-              I'm a Provider — Join the Network
-            </Link>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                <Link
+                  href="/assessment"
+                  className="px-8 py-4 bg-white text-blue-700 font-bold text-lg rounded-xl hover:bg-blue-50 transition-all shadow-lg"
+                >
+                  Take Free Assessment →
+                </Link>
+                <Link
+                  href="/providers"
+                  className="px-8 py-4 bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white font-semibold text-lg rounded-xl hover:bg-white/20 transition-all"
+                >
+                  I'm a Provider — Join the Network
+                </Link>
+              </div>
+
+              <div className="max-w-xl mx-auto bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/20">
+                <p className="text-sm text-blue-100 mb-3">Want to see which providers fit your debt level?</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {DEBT_OPTIONS.map((opt) => (
+                    <Link
+                      key={opt.value}
+                      href={`/assessment?debt=${opt.value}`}
+                      className="py-2.5 px-3 rounded-lg border-2 border-white/30 text-center text-sm font-medium text-white hover:bg-white/20 transition-all"
+                    >
+                      {opt.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* How we vet */}
+            <div>
+              <div className="text-center mb-8">
+                <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wide mb-2">What makes us different</p>
+                <h2 className="text-3xl font-black text-black dark:text-white">How we vet providers</h2>
+                <p className="text-zinc-500 dark:text-zinc-400 mt-2 max-w-2xl mx-auto">
+                  Every provider on Settle In Peace is screened for transparency, licensing, and proven results.
+                </p>
+              </div>
+
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {VETTING_CRITERIA.map((criterion) => (
+                  <div
+                    key={criterion.title}
+                    className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-sm"
+                  >
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">{criterion.title}</h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">{criterion.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Two-sided CTA */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">For consumers</h3>
+                <p className="text-zinc-500 dark:text-zinc-400 mb-4">
+                  Join early access. We'll match you with vetted providers as our network grows — no obligation, no credit check.
+                </p>
+                <Link
+                  href="/assessment"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Get Started →
+                </Link>
+              </div>
+
+              <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">For debt relief providers</h3>
+                <p className="text-zinc-500 dark:text-zinc-400 mb-4">
+                  Access pre-qualified, intent-driven leads and get listed in a transparent comparison marketplace.
+                </p>
+                <Link
+                  href="/providers"
+                  className="inline-flex items-center px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Join the Network →
+                </Link>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Provider cards — shown when providers exist */}
         {!loading && providers.length > 0 && (
           <>
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-8 text-center">
+              <p className="text-blue-800 dark:text-blue-300 text-sm font-medium">
+                💡 More providers are joining soon. Taking the assessment helps us match you with the best-fit options as the network grows.
+              </p>
+            </div>
+
             {/* Sort controls */}
             <div className="flex items-center gap-3 mb-6 flex-wrap">
               <span className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">Sort by:</span>
@@ -203,7 +298,7 @@ function CompareContent() {
                 { id: 'rating' as const, label: 'Highest Rated' },
                 { id: 'fee' as const, label: 'Lowest Fee' },
                 { id: 'savings' as const, label: 'Most Savings' },
-              ]).map(opt => (
+              ]).map((opt) => (
                 <button
                   key={opt.id}
                   onClick={() => setSortBy(opt.id)}
@@ -233,7 +328,6 @@ function CompareContent() {
                   )}
                   <div className="p-6">
                     <div className="flex flex-col md:flex-row md:items-start gap-6">
-
                       {/* Company info */}
                       <div className="flex-1">
                         <div className="flex items-start justify-between gap-4">
@@ -269,7 +363,6 @@ function CompareContent() {
                           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-3">{p.description}</p>
                         )}
 
-                        {/* Match reasons */}
                         {isMatched && p.matchReasons && p.matchReasons.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-4">
                             {p.matchReasons.map((reason, i) => (
