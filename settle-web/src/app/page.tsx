@@ -442,6 +442,65 @@ export default function Home() {
       </section>
 
       {/* ============================================================
+          PORTAL LOGIN SECTION
+          - Visible entry points for consumers, providers, sales, admin
+          ============================================================ */}
+      <section className="py-16 px-4 bg-zinc-50 dark:bg-zinc-950">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10">
+            <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wide mb-3">Team & Partner Access</p>
+            <h2 className="text-3xl sm:text-4xl font-black text-black dark:text-white mb-4">Log in to your portal</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto">
+              Consumers, providers, sales agents, and administrators each have a dedicated portal to manage their experience.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                title: 'Consumer Login',
+                desc: 'View your debts, assessment results, and provider matches.',
+                href: '/login',
+                cta: 'Log In',
+              },
+              {
+                title: 'Provider Portal',
+                desc: 'Access matched leads, manage your profile, and purchase credits.',
+                href: '/login',
+                cta: 'Provider Login',
+              },
+              {
+                title: 'Sales CRM',
+                desc: 'Manage leads, track outreach, and update pipeline status.',
+                href: '/login',
+                cta: 'Sales Login',
+              },
+              {
+                title: 'Admin Dashboard',
+                desc: 'Oversee users, providers, collections, and platform settings.',
+                href: '/login',
+                cta: 'Admin Login',
+              },
+            ].map((portal) => (
+              <div
+                key={portal.title}
+                className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              >
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">{portal.title}</h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 flex-grow">{portal.desc}</p>
+                <Link
+                  href={portal.href}
+                  className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  {portal.cta} →
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
           FINAL CTA SECTION
           ============================================================ */}
       <section className="py-24 px-4 bg-white dark:bg-black text-center">
