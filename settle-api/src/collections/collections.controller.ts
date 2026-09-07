@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -24,6 +25,7 @@ import { CreateCallLogDto } from './dto/create-call-log.dto';
 import { RunDialerCallDto } from './dto/run-dialer-call.dto';
 import { CreateCreditReportDto } from './dto/create-credit-report.dto';
 import { CreateBackgroundCheckDto } from './dto/create-background-check.dto';
+import { AssignCollectionAccountDto } from './dto/assign-collection-account.dto';
 
 interface AuthenticatedRequest extends Request {
   user: { sub: string; id: string; role: string; email: string };
@@ -35,7 +37,13 @@ export class CollectionsController {
   constructor(private readonly collectionsService: CollectionsService) {}
 
   @Get('accounts')
-  findAll(@Query() filter: FilterCollectionAccountDto) {
+  findAll(
+    @Query() filter: FilterCollectionAccountDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    if (req.user.role === 'sales' && !filter.assignedTo) {
+      filter.assignedTo = req.user.sub;
+    }
     return this.collectionsService.findAll(filter);
   }
 
@@ -146,6 +154,15 @@ export class CollectionsController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.collectionsService.createBackgroundCheck(id, req.user.sub, dto);
+  }
+
+  @Patch('accounts/:id/assign')
+  assignAccount(
+    @Param('id') id: string,
+    @Body() dto: AssignCollectionAccountDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.collectionsService.assignAccount(id, dto.assignedTo, req.user.sub);
   }
 
   @Get('accounts/:id/background-checks')

@@ -7,7 +7,7 @@ export class FilterCollectionAccountDto {
   @IsOptional()
   status?: CollectionAccountStatus;
 
-  @IsUUID()
+  @IsString()
   @IsOptional()
   assignedTo?: string;
 

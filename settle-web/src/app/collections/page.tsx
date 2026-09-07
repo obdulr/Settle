@@ -53,6 +53,10 @@ export default function CollectionsDashboardPage() {
   const [selectedAccount, setSelectedAccount] = useState<CollectionAccount | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'skipTrace' | 'calls' | 'creditReports' | 'backgroundChecks'>('overview');
 
+  // Sales team data for admin assignment
+  const [salesAgents, setSalesAgents] = useState<{ id: string; email: string; firstName?: string; lastName?: string }[]>([]);
+  const [assignedToFilter, setAssignedToFilter] = useState('');
+
   // Filters
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
@@ -76,6 +80,7 @@ export default function CollectionsDashboardPage() {
     }
     setUser(parsed);
     loadData();
+    if (parsed.role === 'admin') loadSalesAgents();
   }, [router, refreshKey]);
 
   const loadData = async () => {
@@ -84,8 +89,13 @@ export default function CollectionsDashboardPage() {
     setError('');
     try {
       const api = getAuthenticatedApi();
+      const params = new URLSearchParams();
+      if (statusFilter) params.set('status', statusFilter);
+      if (search) params.set('search', search);
+      if (assignedToFilter) params.set('assignedTo', assignedToFilter);
+      params.set('limit', '100');
       const [accountsRes, statsRes] = await Promise.all([
-        api<{ accounts: CollectionAccount[] }>(`/collections/accounts?status=${statusFilter || ''}&search=${encodeURIComponent(search)}&limit=100`, { method: 'GET' }),
+        api<{ accounts: CollectionAccount[] }>(`/collections/accounts?${params.toString()}`, { method: 'GET' }),
         api<DashboardStats>('/collections/dashboard', { method: 'GET' }),
       ]);
       setAccounts(accountsRes.accounts || []);
@@ -94,6 +104,17 @@ export default function CollectionsDashboardPage() {
       setError(err?.message || 'Failed to load collections data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSalesAgents = async () => {
+    if (typeof window === 'undefined' || !isAuthenticated()) return;
+    try {
+      const api = getAuthenticatedApi();
+      const agents = await api<{ id: string; email: string; firstName?: string; lastName?: string }[]>('/admin/users?role=sales', { method: 'GET' });
+      setSalesAgents(agents || []);
+    } catch (err: any) {
+      console.error('Failed to load sales agents', err?.message);
     }
   };
 
@@ -130,6 +151,18 @@ export default function CollectionsDashboardPage() {
       setRefreshKey((k) => k + 1);
     } catch (err: any) {
       setError(err?.message || 'Failed to update status');
+    }
+  };
+
+  const handleAssignAccount = async (id: string, assignedTo: string) => {
+    try {
+      await getAuthenticatedApi()(`/collections/accounts/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ assignedTo }) });
+      if (selectedAccount && selectedAccount.id === id) {
+        setSelectedAccount({ ...selectedAccount, assignedTo: assignedTo || undefined });
+      }
+      setRefreshKey((k) => k + 1);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to assign account');
     }
   };
 
@@ -178,6 +211,12 @@ export default function CollectionsDashboardPage() {
 
   const formatCurrency = (amount?: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+
+  const getAssignedToName = (id?: string) => {
+    if (!id) return 'Unassigned';
+    const agent = salesAgents.find((a) => a.id === id);
+    return agent ? `${agent.firstName || ''} ${agent.lastName || ''}`.trim() || agent.email : `User ${id.slice(0, 8)}...`;
+  };
 
   if (loading && !accounts.length) {
     return (
@@ -247,6 +286,21 @@ export default function CollectionsDashboardPage() {
               </option>
             ))}
           </select>
+          {user?.role === 'admin' && (
+            <select
+              value={assignedToFilter}
+              onChange={(e) => setAssignedToFilter(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
+            >
+              <option value="">All Reps</option>
+              <option value="unassigned">Unassigned</option>
+              {salesAgents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {`${a.firstName || ''} ${a.lastName || ''}`.trim() || a.email}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             onClick={loadData}
             className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg text-sm font-medium"
@@ -265,6 +319,7 @@ export default function CollectionsDashboardPage() {
                 <th className="text-left px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">Priority</th>
                 <th className="text-left px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">Balance</th>
                 <th className="text-left px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">Delinquency</th>
+                <th className="text-left px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">Assigned To</th>
                 <th className="text-left px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">Actions</th>
               </tr>
             </thead>
@@ -276,6 +331,7 @@ export default function CollectionsDashboardPage() {
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{PRIORITY_LABELS[account.priority] || account.priority}</td>
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{formatCurrency(account.currentBalance)}</td>
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{account.delinquencyDays} days</td>
+                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300 text-xs">{getAssignedToName(account.assignedTo)}</td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => { setSelectedAccount(account); setActiveTab('overview'); }}
@@ -288,7 +344,7 @@ export default function CollectionsDashboardPage() {
               ))}
               {!accounts.length && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-zinc-500 dark:text-zinc-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-zinc-500 dark:text-zinc-400">
                     No collection accounts found.
                   </td>
                 </tr>
@@ -383,6 +439,23 @@ export default function CollectionsDashboardPage() {
                   <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Notes</div>
                   <p className="text-sm text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">{selectedAccount.notes || 'No notes.'}</p>
                 </div>
+                {user?.role === 'admin' && (
+                  <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-lg">
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">Assign To</div>
+                    <select
+                      value={selectedAccount.assignedTo || ''}
+                      onChange={(e) => handleAssignAccount(selectedAccount.id, e.target.value)}
+                      className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                    >
+                      <option value="">Unassigned</option>
+                      {salesAgents.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {`${a.firstName || ''} ${a.lastName || ''}`.trim() || a.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             )}
 

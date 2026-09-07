@@ -67,6 +67,7 @@ export default function Navigation() {
     }
     if (user.role === 'admin') {
       roleItems.push({ href: '/admin', label: 'Admin' });
+      roleItems.push({ href: '/admin/sales-agents', label: 'Sales Team' });
       roleItems.push({ href: '/admin/sales', label: 'Sales CRM' });
       roleItems.push({ href: '/collections', label: 'Collections' });
     }

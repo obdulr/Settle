@@ -8,6 +8,7 @@ import { SkipTraceResult, SkipTraceStatus } from '../entities/skip-trace-result.
 import { CallLog, CallDirection, CallStatus } from '../entities/call-log.entity';
 import { CreditReport } from '../entities/credit-report.entity';
 import { BackgroundCheck } from '../entities/background-check.entity';
+import { User } from '../entities/user.entity';
 import { CreateCollectionAccountDto } from './dto/create-collection-account.dto';
 import { UpdateCollectionAccountDto } from './dto/update-collection-account.dto';
 import { FilterCollectionAccountDto } from './dto/filter-collection-account.dto';
@@ -36,6 +37,8 @@ export class CollectionsService {
     private readonly creditReportsRepository: Repository<CreditReport>,
     @InjectRepository(BackgroundCheck)
     private readonly backgroundChecksRepository: Repository<BackgroundCheck>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
   ) {}
 
   async findAll(filter: FilterCollectionAccountDto = {}) {
@@ -54,7 +57,11 @@ export class CollectionsService {
       query.andWhere('account.status = :status', { status: filter.status });
     }
     if (filter.assignedTo) {
-      query.andWhere('account.assignedTo = :assignedTo', { assignedTo: filter.assignedTo });
+      if (filter.assignedTo === 'unassigned') {
+        query.andWhere('account.assignedTo IS NULL');
+      } else {
+        query.andWhere('account.assignedTo = :assignedTo', { assignedTo: filter.assignedTo });
+      }
     }
     if (filter.creditorId) {
       query.andWhere('account.creditorId = :creditorId', { creditorId: filter.creditorId });
@@ -96,6 +103,19 @@ export class CollectionsService {
     const account = await this.findOne(id);
     const updated = this.accountsRepository.merge(account, dto);
     return this.accountsRepository.save(updated);
+  }
+
+  async assignAccount(id: string, assignedTo: string, agentId: string) {
+    const account = await this.findOne(id);
+    const agent = await this.usersRepository.findOne({ where: { id: assignedTo } });
+    if (!agent) throw new NotFoundException('Assigned user not found');
+    account.assignedTo = assignedTo;
+    const saved = await this.accountsRepository.save(account);
+    await this.addNote(id, agentId, {
+      noteType: CollectionNoteType.GENERAL,
+      content: `Account assigned to ${agent.firstName || agent.email} (${agent.role || 'user'}).`,
+    });
+    return saved;
   }
 
   async remove(id: string) {

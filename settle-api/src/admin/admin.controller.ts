@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -15,6 +17,8 @@ import { ManualAssignLeadDto } from './dto/manual-assign-lead.dto';
 import { RejectProviderDto } from './dto/reject-provider.dto';
 import { CreateSalesAgentDto } from './dto/create-sales-agent.dto';
 import { AssignToSalesDto } from './dto/assign-to-sales.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -105,6 +109,33 @@ export class AdminController {
   @Post('sales-agents')
   async createSalesAgent(@Body() body: CreateSalesAgentDto) {
     return this.adminService.createSalesAgent(body);
+  }
+
+  /** List users by role. */
+  @Get('users')
+  async getUsers(@Query('role') role?: string) {
+    return this.adminService.getUsers(role);
+  }
+
+  /** Create a user (admin, sales, provider, customer). */
+  @Post('users')
+  async createUser(@Body() body: CreateAdminUserDto) {
+    return this.adminService.createSalesAgent({
+      ...body,
+      role: body.role || 'sales',
+    } as any);
+  }
+
+  /** Update a user's role, name, or phone. */
+  @Patch('users/:id')
+  async updateUser(@Param('id') id: string, @Body() body: UpdateUserDto) {
+    return this.adminService.updateUser(id, body);
+  }
+
+  /** Delete a user. */
+  @Delete('users/:id')
+  async deleteUser(@Param('id') id: string) {
+    return this.adminService.deleteUser(id);
   }
 
   /** Assign a lead to a sales agent. */

@@ -202,6 +202,36 @@ export class AdminService {
 
   // --- sales agents ---
 
+  /** List users, optionally filtered by role. */
+  async getUsers(role?: string) {
+    const where: any = {};
+    if (role) where.role = role;
+    return this.usersRepository.find({
+      where,
+      order: { createdAt: 'DESC' },
+      select: ['id', 'email', 'firstName', 'lastName', 'phone', 'role', 'createdAt'],
+    });
+  }
+
+  /** Update any user (role, name, phone). */
+  async updateUser(id: string, body: { firstName?: string; lastName?: string; phone?: string; role?: string }) {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+
+    Object.assign(user, body);
+    const saved = await this.usersRepository.save(user);
+    const { password: _, ...result } = saved;
+    return result;
+  }
+
+  /** Delete a user. */
+  async deleteUser(id: string) {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    await this.usersRepository.remove(user);
+    return { success: true };
+  }
+
   /** List all sales agents. */
   async getSalesAgents() {
     return this.usersRepository.find({
