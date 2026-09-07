@@ -472,7 +472,7 @@ export default function Home() {
               {
                 title: 'Sales CRM',
                 desc: 'Manage leads, track outreach, and update pipeline status.',
-                href: '/login',
+                href: '/sales/login',
                 cta: 'Sales Login',
               },
               {
