@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuthenticatedApi } from '@/lib/api';
 import { getStoredUser, isAuthenticated } from '@/lib/authUtils';
@@ -33,6 +33,7 @@ interface CollectionAccount {
   delinquencyDays: number;
   assignedTo?: string;
   notes?: string;
+  customFields?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,7 +52,7 @@ export default function CollectionsDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedAccount, setSelectedAccount] = useState<CollectionAccount | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'skipTrace' | 'calls' | 'creditReports' | 'backgroundChecks'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'paymentPlan' | 'outreach' | 'history' | 'skipTrace' | 'calls' | 'creditReports' | 'backgroundChecks'>('overview');
 
   // Sales team data for admin assignment
   const [salesAgents, setSalesAgents] = useState<{ id: string; email: string; firstName?: string; lastName?: string }[]>([]);
@@ -60,6 +61,33 @@ export default function CollectionsDashboardPage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
+  const [segmentFilter, setSegmentFilter] = useState('');
+  const [viewMode, setViewMode] = useState<'accounts' | 'queue'>('accounts');
+
+  const SEGMENTS = [
+    { value: '', label: 'All Accounts' },
+    { value: 'critical', label: 'Critical Priority' },
+    { value: 'high_balance', label: 'High Balance (≥$5,000)' },
+    { value: 'late', label: '90+ Days Late' },
+    { value: 'paused', label: 'Paused / Vulnerability' },
+    { value: 'has_outreach', label: 'Has Outreach Scheduled' },
+    { value: 'has_plan', label: 'Has Payment Plan' },
+  ];
+
+  const displayedAccounts = useMemo(() => {
+    return accounts.filter((a) => {
+      if (!segmentFilter) return true;
+      switch (segmentFilter) {
+        case 'critical': return a.priority === 4;
+        case 'high_balance': return a.currentBalance >= 5000;
+        case 'late': return a.delinquencyDays >= 90;
+        case 'paused': return a.customFields?.vulnerability?.paused;
+        case 'has_outreach': return a.customFields?.outreach;
+        case 'has_plan': return a.customFields?.paymentPlan;
+        default: return true;
+      }
+    });
+  }, [accounts, segmentFilter]);
 
   // Forms
   const [newAccountOpen, setNewAccountOpen] = useState(false);
@@ -67,6 +95,49 @@ export default function CollectionsDashboardPage() {
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Vulnerability pause
+  const [pauseModalOpen, setPauseModalOpen] = useState(false);
+  const [pauseReason, setPauseReason] = useState('');
+  const [pauseNotes, setPauseNotes] = useState('');
+
+  // Payment plan
+  const [planMonths, setPlanMonths] = useState(6);
+  const [planStartDate, setPlanStartDate] = useState('');
+  const [planMonthlyPayment, setPlanMonthlyPayment] = useState('');
+  const [planPaymentMethod, setPlanPaymentMethod] = useState('bank_debit');
+
+  // Outreach queue
+  const [outreachDate, setOutreachDate] = useState('');
+  const [outreachTime, setOutreachTime] = useState('09:00');
+  const [outreachTimeZone, setOutreachTimeZone] = useState('America/New_York');
+  const [outreachChannel, setOutreachChannel] = useState('sms');
+  const [outreachMessage, setOutreachMessage] = useState('');
+  const [outreachQuietHours, setOutreachQuietHours] = useState(true);
+  const [outreachFrequencyCap, setOutreachFrequencyCap] = useState(3);
+
+  // Audit history
+  const [historyItems, setHistoryItems] = useState<{ id: string; type: 'note' | 'call' | 'change'; content: string; createdAt: string; authorId?: string }[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const US_TIMEZONES = [
+    'America/New_York',
+    'America/Chicago',
+    'America/Denver',
+    'America/Los_Angeles',
+    'America/Anchorage',
+    'Pacific/Honolulu',
+  ];
+
+  const VULNERABILITY_REASONS = [
+    'Job loss / Hardship',
+    'Dispute',
+    'Illness / Medical',
+    'Bankruptcy',
+    'Deceased',
+    'Natural disaster',
+    'Other',
+  ];
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !isAuthenticated()) {
@@ -82,6 +153,12 @@ export default function CollectionsDashboardPage() {
     loadData();
     if (parsed.role === 'admin') loadSalesAgents();
   }, [router, refreshKey]);
+
+  useEffect(() => {
+    if (activeTab === 'history' && selectedAccount) {
+      loadHistory();
+    }
+  }, [activeTab, selectedAccount]);
 
   const loadData = async () => {
     if (typeof window === 'undefined' || !isAuthenticated()) return;
@@ -180,6 +257,179 @@ export default function CollectionsDashboardPage() {
     }
   };
 
+  const handlePauseAccount = async () => {
+    if (!selectedAccount || !pauseReason) return;
+    setSaving(true);
+    try {
+      const updatedCustomFields = {
+        ...(selectedAccount.customFields || {}),
+        vulnerability: {
+          paused: true,
+          reason: pauseReason,
+          notes: pauseNotes,
+          pausedAt: new Date().toISOString(),
+          pausedBy: user?.id,
+        },
+      };
+      await getAuthenticatedApi()(`/collections/accounts/${selectedAccount.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ customFields: updatedCustomFields }),
+      });
+      await getAuthenticatedApi()(`/collections/accounts/${selectedAccount.id}/notes`, {
+        method: 'POST',
+        body: JSON.stringify({
+          content: `Collection paused: ${pauseReason}${pauseNotes ? ` — ${pauseNotes}` : ''}`,
+        }),
+      });
+      setPauseModalOpen(false);
+      setPauseReason('');
+      setPauseNotes('');
+      setRefreshKey((k) => k + 1);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to pause account');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResumeAccount = async () => {
+    if (!selectedAccount) return;
+    setSaving(true);
+    try {
+      const updatedCustomFields = { ...(selectedAccount.customFields || {}) };
+      delete updatedCustomFields.vulnerability;
+      await getAuthenticatedApi()(`/collections/accounts/${selectedAccount.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ customFields: updatedCustomFields }),
+      });
+      await getAuthenticatedApi()(`/collections/accounts/${selectedAccount.id}/notes`, {
+        method: 'POST',
+        body: JSON.stringify({ content: 'Collection resumed / vulnerability flag cleared.' }),
+      });
+      setRefreshKey((k) => k + 1);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to resume account');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSavePaymentPlan = async () => {
+    if (!selectedAccount) return;
+    const monthly = parseFloat(planMonthlyPayment) || 0;
+    const months = planMonths || 6;
+    if (monthly <= 0) {
+      setError('Monthly payment must be greater than 0');
+      return;
+    }
+    setSaving(true);
+    try {
+      const totalRepayment = monthly * months;
+      const plan = {
+        monthlyPayment: monthly,
+        termMonths: months,
+        startDate: planStartDate || new Date().toISOString().split('T')[0],
+        paymentMethod: planPaymentMethod,
+        totalRepayment,
+        originalBalance: selectedAccount.currentBalance,
+        createdAt: new Date().toISOString(),
+        createdBy: user?.id,
+      };
+      const updatedCustomFields = { ...(selectedAccount.customFields || {}), paymentPlan: plan };
+      await getAuthenticatedApi()(`/collections/accounts/${selectedAccount.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ customFields: updatedCustomFields, monthlyPayment: monthly, status: 'payment_plan' }),
+      });
+      await getAuthenticatedApi()(`/collections/accounts/${selectedAccount.id}/notes`, {
+        method: 'POST',
+        body: JSON.stringify({
+          content: `Payment arrangement set: ${months} months × ${formatCurrency(monthly)}/month (${planPaymentMethod}). Total: ${formatCurrency(totalRepayment)}.`,
+        }),
+      });
+      setRefreshKey((k) => k + 1);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to save payment plan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveOutreach = async () => {
+    if (!selectedAccount) return;
+    if (!outreachDate) {
+      setError('Please select a contact date');
+      return;
+    }
+    setSaving(true);
+    try {
+      const scheduledAt = `${outreachDate}T${outreachTime || '09:00'}`;
+      const outreach = {
+        scheduledAt,
+        timeZone: outreachTimeZone,
+        channel: outreachChannel,
+        message: outreachMessage,
+        respectQuietHours: outreachQuietHours,
+        weeklyFrequencyCap: outreachFrequencyCap,
+        createdAt: new Date().toISOString(),
+        createdBy: user?.id,
+        status: 'scheduled',
+      };
+      const updatedCustomFields = { ...(selectedAccount.customFields || {}), outreach };
+      await getAuthenticatedApi()(`/collections/accounts/${selectedAccount.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ customFields: updatedCustomFields }),
+      });
+      await getAuthenticatedApi()(`/collections/accounts/${selectedAccount.id}/notes`, {
+        method: 'POST',
+        body: JSON.stringify({
+          content: `Outreach scheduled: ${outreachChannel} on ${scheduledAt} (${outreachTimeZone}). Quiet hours: ${outreachQuietHours ? 'yes' : 'no'}.`,
+        }),
+      });
+      setRefreshKey((k) => k + 1);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to schedule outreach');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const loadHistory = async () => {
+    if (!selectedAccount) return;
+    setHistoryLoading(true);
+    try {
+      const [notes, calls] = await Promise.all([
+        getAuthenticatedApi()<{ id: string; content: string; createdAt: string; authorId?: string; noteType?: string }[]>(`/collections/accounts/${selectedAccount.id}/notes`, { method: 'GET' }),
+        getAuthenticatedApi()<{ id: string; status: string; phoneNumber: string; createdAt: string; duration?: number; notes?: string }[]>(`/collections/accounts/${selectedAccount.id}/calls`, { method: 'GET' }),
+      ]);
+      const items = [
+        ...(notes || []).map((n) => ({
+          id: `note-${n.id}`,
+          type: 'note' as const,
+          content: `[${n.noteType || 'general'}] ${n.content}`,
+          createdAt: n.createdAt,
+          authorId: n.authorId,
+        })),
+        ...(calls || []).map((c) => ({
+          id: `call-${c.id}`,
+          type: 'call' as const,
+          content: `Call to ${c.phoneNumber} — ${c.status}${c.duration ? ` (${c.duration}s)` : ''}${c.notes ? ` — ${c.notes}` : ''}`,
+          createdAt: c.createdAt,
+        })),
+        {
+          id: `created-${selectedAccount.id}`,
+          type: 'change' as const,
+          content: `Account created with status ${selectedAccount.status} and balance ${formatCurrency(selectedAccount.currentBalance)}`,
+          createdAt: selectedAccount.createdAt,
+        },
+      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setHistoryItems(items);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load history');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   const handleRunSkipTrace = async () => {
     if (!selectedAccount) return;
     setSaving(true);
@@ -211,6 +461,28 @@ export default function CollectionsDashboardPage() {
 
   const formatCurrency = (amount?: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+
+  const queueItems = useMemo(() => {
+    return accounts
+      .filter((a) => a.customFields?.outreach)
+      .map((a) => ({
+        account: a,
+        outreach: a.customFields!.outreach,
+        scheduledAt: new Date(a.customFields!.outreach.scheduledAt).getTime(),
+      }))
+      .sort((a, b) => a.scheduledAt - b.scheduledAt);
+  }, [accounts]);
+
+  const segmentCounts = useMemo(() => {
+    return {
+      critical: accounts.filter((a) => a.priority === 4).length,
+      high_balance: accounts.filter((a) => a.currentBalance >= 5000).length,
+      late: accounts.filter((a) => a.delinquencyDays >= 90).length,
+      paused: accounts.filter((a) => a.customFields?.vulnerability?.paused).length,
+      has_outreach: accounts.filter((a) => a.customFields?.outreach).length,
+      has_plan: accounts.filter((a) => a.customFields?.paymentPlan).length,
+    };
+  }, [accounts]);
 
   const getAssignedToName = (id?: string) => {
     if (!id) return 'Unassigned';
@@ -265,15 +537,95 @@ export default function CollectionsDashboardPage() {
           </div>
         )}
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <input
+        {/* View mode toggle */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setViewMode('accounts')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${
+              viewMode === 'accounts'
+                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black'
+                : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700'
+            }`}
+          >
+            Accounts
+          </button>
+          <button
+            onClick={() => setViewMode('queue')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${
+              viewMode === 'queue'
+                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black'
+                : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700'
+            }`}
+          >
+            Outreach Queue ({queueItems.length})
+          </button>
+        </div>
+
+        {viewMode === 'queue' ? (
+          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            <table className="min-w-full text-sm">
+              <thead className="bg-zinc-50 dark:bg-zinc-950">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">Account</th>
+                  <th className="text-left px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">Scheduled</th>
+                  <th className="text-left px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">Channel</th>
+                  <th className="text-left px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">Time Zone</th>
+                  <th className="text-left px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">Message</th>
+                  <th className="text-left px-4 py-3 font-medium text-zinc-600 dark:text-zinc-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {queueItems.map(({ account, outreach }) => (
+                  <tr key={account.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-950">
+                    <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100 font-medium">{account.accountNumber || '—'}</td>
+                    <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                      {new Date(outreach.scheduledAt).toLocaleString(undefined, { timeZone: outreach.timeZone })}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300 capitalize">{outreach.channel}</td>
+                    <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300 text-xs">{outreach.timeZone}</td>
+                    <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300 text-xs max-w-xs truncate">{outreach.message || '—'}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => { setSelectedAccount(account); setActiveTab('outreach'); }}
+                        className="text-blue-600 hover:underline text-xs"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!queueItems.length && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-zinc-500 dark:text-zinc-400">
+                      No scheduled outreach.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <>
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <input
             type="text"
             placeholder="Search account number or notes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
           />
+          <select
+            value={segmentFilter}
+            onChange={(e) => setSegmentFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
+          >
+            {SEGMENTS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}{s.value ? ` (${segmentCounts[s.value as keyof typeof segmentCounts]})` : ''}
+              </option>
+            ))}
+          </select>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -324,9 +676,16 @@ export default function CollectionsDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {accounts.map((account) => (
+              {displayedAccounts.map((account) => (
                 <tr key={account.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-950">
-                  <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100 font-medium">{account.accountNumber || '—'}</td>
+                  <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100 font-medium">
+                    {account.accountNumber || '—'}
+                    {account.customFields?.vulnerability?.paused && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">
+                        Paused
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300 capitalize">{account.status}</td>
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{PRIORITY_LABELS[account.priority] || account.priority}</td>
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{formatCurrency(account.currentBalance)}</td>
@@ -342,17 +701,68 @@ export default function CollectionsDashboardPage() {
                   </td>
                 </tr>
               ))}
-              {!accounts.length && (
+              {!displayedAccounts.length && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-zinc-500 dark:text-zinc-400">
-                    No collection accounts found.
+                    No accounts in this segment.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </>
+        )}
+
+      {/* Pause Modal */}
+      {pauseModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg max-w-lg w-full p-6">
+            <h2 className="text-lg font-semibold mb-4 text-zinc-900 dark:text-white">Pause Collection</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Reason *</label>
+                <select
+                  value={pauseReason}
+                  onChange={(e) => setPauseReason(e.target.value)}
+                  className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                >
+                  <option value="">Select a reason</option>
+                  {VULNERABILITY_REASONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Additional notes</label>
+                <textarea
+                  value={pauseNotes}
+                  onChange={(e) => setPauseNotes(e.target.value)}
+                  placeholder="e.g. Debtor mentioned job loss, cannot manage payments."
+                  className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPauseModalOpen(false)}
+                  className="px-4 py-2 text-zinc-600 dark:text-zinc-300 hover:underline text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePauseAccount}
+                  disabled={saving || !pauseReason}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                >
+                  {saving ? 'Pausing...' : 'Pause Collection'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New Account Modal */}
       {newAccountOpen && (
@@ -398,13 +808,13 @@ export default function CollectionsDashboardPage() {
             </div>
 
             <div className="flex gap-2 mb-6 overflow-x-auto">
-              {(['overview', 'notes', 'skipTrace', 'calls', 'creditReports', 'backgroundChecks'] as const).map((tab) => (
+              {(['overview', 'notes', 'paymentPlan', 'outreach', 'history', 'skipTrace', 'calls', 'creditReports', 'backgroundChecks'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${activeTab === tab ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'}`}
                 >
-                  {tab.replace(/([A-Z])/g, ' $1').replace(/^\w/, (c) => c.toUpperCase())}
+                  {tab === 'paymentPlan' ? 'Payment Plan' : tab === 'outreach' ? 'Outreach' : tab === 'history' ? 'History' : tab.replace(/([A-Z])/g, ' $1').replace(/^\w/, (c) => c.toUpperCase())}
                 </button>
               ))}
             </div>
@@ -439,6 +849,81 @@ export default function CollectionsDashboardPage() {
                   <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Notes</div>
                   <p className="text-sm text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">{selectedAccount.notes || 'No notes.'}</p>
                 </div>
+                {selectedAccount.customFields?.vulnerability?.paused ? (
+                  <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-900 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-red-800 dark:text-red-200">Collection Paused</span>
+                      <button
+                        onClick={handleResumeAccount}
+                        disabled={saving}
+                        className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                      >
+                        Resume
+                      </button>
+                    </div>
+                    <p className="text-xs text-red-700 dark:text-red-300">
+                      Reason: {selectedAccount.customFields.vulnerability.reason}
+                    </p>
+                    {selectedAccount.customFields.vulnerability.notes && (
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        {selectedAccount.customFields.vulnerability.notes}
+                      </p>
+                    )}
+                    <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                      Paused {new Date(selectedAccount.customFields.vulnerability.pausedAt).toLocaleString()}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-lg">
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">Vulnerability / Pause</div>
+                    <button
+                      onClick={() => setPauseModalOpen(true)}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium"
+                    >
+                      Pause Collection
+                    </button>
+                  </div>
+                )}
+
+                <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-lg">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">Compliance & Consent</div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <span className="px-2 py-1 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 rounded">TCPA Consent</span>
+                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded">SOC 2</span>
+                    <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 rounded">GDPR Ready</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="tcpaConsent"
+                      checked={selectedAccount.customFields?.consent?.tcpa || false}
+                      onChange={(e) => {
+                        const updatedCustomFields = {
+                          ...(selectedAccount.customFields || {}),
+                          consent: {
+                            ...(selectedAccount.customFields?.consent || {}),
+                            tcpa: e.target.checked,
+                            capturedAt: new Date().toISOString(),
+                          },
+                        };
+                        getAuthenticatedApi()(`/collections/accounts/${selectedAccount.id}`, {
+                          method: 'PUT',
+                          body: JSON.stringify({ customFields: updatedCustomFields }),
+                        });
+                      }}
+                      className="rounded border-zinc-300"
+                    />
+                    <label htmlFor="tcpaConsent" className="text-sm text-zinc-700 dark:text-zinc-300">
+                      TCPA/DNC consent captured
+                    </label>
+                  </div>
+                  {selectedAccount.customFields?.consent?.capturedAt && (
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Captured {new Date(selectedAccount.customFields.consent.capturedAt).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+
                 {user?.role === 'admin' && (
                   <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-lg">
                     <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">Assign To</div>
@@ -455,6 +940,275 @@ export default function CollectionsDashboardPage() {
                       ))}
                     </select>
                   </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'outreach' && (
+              <div className="space-y-5">
+                {selectedAccount.customFields?.outreach ? (
+                  <div className="p-4 bg-indigo-50 dark:bg-indigo-950 border border-indigo-100 dark:border-indigo-900 rounded-lg">
+                    <div className="text-sm font-semibold text-indigo-800 dark:text-indigo-200 mb-2">Scheduled Outreach</div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-xs text-indigo-600 dark:text-indigo-400">Date/Time</div>
+                        <div className="font-semibold text-indigo-900 dark:text-indigo-100">
+                          {new Date(selectedAccount.customFields.outreach.scheduledAt).toLocaleString(undefined, { timeZone: selectedAccount.customFields.outreach.timeZone })}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-indigo-600 dark:text-indigo-400">Channel</div>
+                        <div className="font-semibold text-indigo-900 dark:text-indigo-100 capitalize">
+                          {selectedAccount.customFields.outreach.channel}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-indigo-600 dark:text-indigo-400">Time Zone</div>
+                        <div className="font-semibold text-indigo-900 dark:text-indigo-100">
+                          {selectedAccount.customFields.outreach.timeZone}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-indigo-600 dark:text-indigo-400">Quiet Hours</div>
+                        <div className="font-semibold text-indigo-900 dark:text-indigo-100">
+                          {selectedAccount.customFields.outreach.respectQuietHours ? 'Yes' : 'No'}
+                        </div>
+                      </div>
+                    </div>
+                    {selectedAccount.customFields.outreach.message && (
+                      <div className="mt-3 p-2 bg-white dark:bg-zinc-800 rounded text-sm text-zinc-700 dark:text-zinc-300">
+                        {selectedAccount.customFields.outreach.message}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Contact Date *</label>
+                        <input
+                          type="date"
+                          value={outreachDate}
+                          onChange={(e) => setOutreachDate(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Time</label>
+                        <input
+                          type="time"
+                          value={outreachTime}
+                          onChange={(e) => setOutreachTime(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Time Zone</label>
+                        <select
+                          value={outreachTimeZone}
+                          onChange={(e) => setOutreachTimeZone(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                        >
+                          {US_TIMEZONES.map((tz) => (
+                            <option key={tz} value={tz}>{tz}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Channel</label>
+                        <select
+                          value={outreachChannel}
+                          onChange={(e) => setOutreachChannel(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                        >
+                          <option value="sms">SMS</option>
+                          <option value="call">Call</option>
+                          <option value="email">Email</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Message (optional)</label>
+                      <textarea
+                        value={outreachMessage}
+                        onChange={(e) => setOutreachMessage(e.target.value)}
+                        placeholder="e.g. Hi, this is about your overdue balance. Can we set up a payment plan?"
+                        className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                        rows={3}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="quietHours"
+                          checked={outreachQuietHours}
+                          onChange={(e) => setOutreachQuietHours(e.target.checked)}
+                          className="rounded border-zinc-300"
+                        />
+                        <label htmlFor="quietHours" className="text-sm text-zinc-700 dark:text-zinc-300">Respect 8pm-8am quiet hours</label>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Weekly contact cap</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={7}
+                          value={outreachFrequencyCap}
+                          onChange={(e) => setOutreachFrequencyCap(parseInt(e.target.value, 10) || 3)}
+                          className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSaveOutreach}
+                      disabled={saving}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                    >
+                      {saving ? 'Scheduling...' : 'Schedule Outreach'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'history' && (
+              <div className="space-y-3">
+                <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Decision & Contact Audit Trail</div>
+                {historyLoading ? (
+                  <div className="text-sm text-zinc-500">Loading history...</div>
+                ) : (
+                  <div className="space-y-3">
+                    {historyItems.map((item) => (
+                      <div key={item.id} className="flex gap-3 p-3 bg-zinc-50 dark:bg-zinc-950 rounded-lg border-l-4 border-zinc-300 dark:border-zinc-700">
+                        <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${
+                          item.type === 'note' ? 'bg-blue-500' : item.type === 'call' ? 'bg-green-500' : 'bg-zinc-500'
+                        }`} />
+                        <div className="flex-1">
+                          <p className="text-sm text-zinc-800 dark:text-zinc-200">{item.content}</p>
+                          <p className="text-xs text-zinc-500 mt-1">{new Date(item.createdAt).toLocaleString()} {item.authorId ? `· by ${item.authorId.slice(0, 8)}` : ''}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {!historyItems.length && (
+                      <div className="text-sm text-zinc-500">No history yet.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'paymentPlan' && (
+              <div className="space-y-5">
+                {selectedAccount.customFields?.paymentPlan ? (
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950 border border-emerald-100 dark:border-emerald-900 rounded-lg">
+                    <div className="text-sm font-semibold text-emerald-800 dark:text-emerald-200 mb-2">Active Payment Arrangement</div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-xs text-emerald-600 dark:text-emerald-400">Monthly Payment</div>
+                        <div className="font-semibold text-emerald-900 dark:text-emerald-100">
+                          {formatCurrency(selectedAccount.customFields.paymentPlan.monthlyPayment)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-emerald-600 dark:text-emerald-400">Term</div>
+                        <div className="font-semibold text-emerald-900 dark:text-emerald-100">
+                          {selectedAccount.customFields.paymentPlan.termMonths} months
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-emerald-600 dark:text-emerald-400">Total Repayment</div>
+                        <div className="font-semibold text-emerald-900 dark:text-emerald-100">
+                          {formatCurrency(selectedAccount.customFields.paymentPlan.totalRepayment)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-emerald-600 dark:text-emerald-400">Start Date</div>
+                        <div className="font-semibold text-emerald-900 dark:text-emerald-100">
+                          {selectedAccount.customFields.paymentPlan.startDate}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">AI-suggested plans</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {[3, 6, 12].map((months) => {
+                          const monthly = selectedAccount.currentBalance / months;
+                          return (
+                            <button
+                              key={months}
+                              onClick={() => { setPlanMonths(months); setPlanMonthlyPayment(monthly.toFixed(2)); }}
+                              className={`p-3 text-left rounded-lg border ${
+                                planMonths === months
+                                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                                  : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800'
+                              }`}
+                            >
+                              <div className="text-xs text-zinc-500 dark:text-zinc-400">{months} months</div>
+                              <div className="font-semibold text-zinc-900 dark:text-white">{formatCurrency(monthly)}/mo</div>
+                              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Interest-free</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Monthly Payment</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={planMonthlyPayment}
+                          onChange={(e) => setPlanMonthlyPayment(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Term (months)</label>
+                        <input
+                          type="number"
+                          value={planMonths}
+                          onChange={(e) => setPlanMonths(parseInt(e.target.value, 10) || 6)}
+                          className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Start Date</label>
+                        <input
+                          type="date"
+                          value={planStartDate}
+                          onChange={(e) => setPlanStartDate(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Payment Method</label>
+                        <select
+                          value={planPaymentMethod}
+                          onChange={(e) => setPlanPaymentMethod(e.target.value)}
+                          className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm"
+                        >
+                          <option value="bank_debit">Bank Debit</option>
+                          <option value="card">Card</option>
+                          <option value="manual">Manual Payment</option>
+                        </select>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSavePaymentPlan}
+                      disabled={saving}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                    >
+                      {saving ? 'Saving...' : 'Lock Payment Arrangement'}
+                    </button>
+                  </>
                 )}
               </div>
             )}
@@ -514,5 +1268,6 @@ export default function CollectionsDashboardPage() {
         </div>
       )}
     </div>
+  </div>
   );
 }

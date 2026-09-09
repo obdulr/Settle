@@ -69,6 +69,7 @@ export default function Navigation() {
       roleItems.push({ href: '/admin', label: 'Admin' });
       roleItems.push({ href: '/admin/sales-agents', label: 'Sales Team' });
       roleItems.push({ href: '/admin/sales', label: 'Sales CRM' });
+      roleItems.push({ href: '/crm', label: 'CRM Center' });
       roleItems.push({ href: '/collections', label: 'Collections' });
     }
   }
