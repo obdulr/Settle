@@ -43,6 +43,13 @@ const REQUIRED_FIELDS: (keyof AssessmentData)[] = [
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025';
 
+// Must match the disclosure text used in the standard assessment form so the
+// stored consent record is consistent regardless of which flow the consumer
+// used. See assessment/page.tsx for the canonical version.
+const TCPA_CONSENT_LANGUAGE =
+  'I agree to be contacted by Settle In Peace and its partner debt relief providers by phone, email, or text message regarding my debt situation. I understand this constitutes a TCPA-compliant opt-in and that standard message and data rates may apply. I may opt out at any time.';
+const CONSENT_PAGE_VERSION = 'assessment-chat-v1';
+
 export default function ChatAssessmentPage() {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -144,7 +151,12 @@ export default function ChatAssessmentPage() {
           monthsBehind: data.monthsBehind,
           hasFiledBankruptcy: data.hasFiledBankruptcy,
           creditScore: data.creditScore,
-          tcpaConsent: true,
+          // Use the real consent value extracted from the conversation —
+          // never hardcode true. The backend will reject the submission if
+          // consent is missing or false.
+          tcpaConsent: data.tcpaConsent === true,
+          consentLanguage: TCPA_CONSENT_LANGUAGE,
+          consentPageVersion: CONSENT_PAGE_VERSION,
         }),
       });
       if (!res.ok) throw new Error('Submission failed');

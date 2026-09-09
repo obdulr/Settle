@@ -85,12 +85,24 @@ export class Lead {
   @Column({ type: 'timestamp', nullable: true })
   expiresAt?: Date;
 
-  // Consent
+  // Consent — full audit trail required for TCPA compliance. Every lead must
+  // have a verifiable record of what the consumer agreed to, when, from where,
+  // and on what device/page version. Forcing consent to true without these
+  // fields creates litigation exposure.
   @Column({ type: 'boolean', default: false })
   tcpaConsent!: boolean;
 
   @Column({ type: 'text', nullable: true })
   consentLanguage?: string;
+
+  @Column({ type: 'varchar', length: 64, name: 'consent_ip', nullable: true })
+  consentIp?: string;
+
+  @Column({ type: 'varchar', length: 512, name: 'consent_user_agent', nullable: true })
+  consentUserAgent?: string;
+
+  @Column({ type: 'varchar', length: 64, name: 'consent_page_version', nullable: true })
+  consentPageVersion?: string;
 
   @Column({ type: 'timestamp', nullable: true })
   consentTimestamp?: Date;
@@ -107,4 +119,17 @@ export class Lead {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
+
+  // Sales / CRM
+  @Column({ type: 'uuid', name: 'sales_agent_id', nullable: true })
+  salesAgentId?: string;
+
+  @Column({ type: 'text', name: 'sales_notes', nullable: true })
+  salesNotes?: string;
+
+  @Column({ type: 'timestamp', name: 'converted_at', nullable: true })
+  convertedAt?: Date;
+
+  @Column({ type: 'timestamp', name: 'sales_agent_assigned_at', nullable: true })
+  salesAgentAssignedAt?: Date;
 }

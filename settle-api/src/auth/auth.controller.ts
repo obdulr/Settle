@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, UsePipes, ValidationPipe, Put } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, UsePipes, ValidationPipe, Put, Delete, Param } from '@nestjs/common';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
@@ -18,19 +18,25 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute for login
   @Post('login')
   async login(@Request() req) {
-    return this.authService.login(req.user);
+    return this.authService.login(req.user, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
   }
 
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 refreshes per minute
   @Post('refresh')
-  async refreshToken(@Body() body: { refreshToken: string }) {
-    return this.authService.refreshToken(body.refreshToken);
+  async refreshToken(@Request() req, @Body() body: { refreshToken: string }) {
+    return this.authService.refreshToken(body.refreshToken, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
   }
 
   @SkipThrottle()
   @Post('logout')
-  async logout() {
-    return this.authService.logout();
+  async logout(@Body() body: { refreshToken: string }) {
+    return this.authService.logout(body.refreshToken);
   }
 
   @UsePipes(new ValidationPipe())
@@ -82,6 +88,30 @@ export class AuthController {
     return this.authService.updateProfile(req.user.sub, updateProfileDto);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Delete('account')
+  async deleteAccount(@Request() req) {
+    return this.authService.deleteAccount(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('sessions')
+  async getActiveSessions(@Request() req) {
+    return this.authService.getActiveSessions(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('sessions/others')
+  async revokeAllOtherSessions(@Request() req, @Body() body: { refreshToken: string }) {
+    return this.authService.revokeAllOtherSessions(req.user.sub, body.refreshToken);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('sessions/:id')
+  async revokeSession(@Request() req, @Param('id') sessionId: string) {
+    return this.authService.revokeSession(req.user.sub, sessionId);
+  }
+
   // ============================================================
   // OTP via Email
   // ============================================================
@@ -96,5 +126,30 @@ export class AuthController {
   @Post('verify-otp')
   async verifyEmailOtp(@Body() body: { email: string; code: string }) {
     return this.authService.verifyEmailOtp(body.email, body.code);
+  }
+
+  // ============================================================
+  // Phone (SMS) Verification
+  // ============================================================
+
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 per minute
+  @Post('send-phone-otp')
+  async sendPhoneOtp(@Request() req) {
+    return this.authService.sendPhoneOtp(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 per minute
+  @Post('verify-phone-otp')
+  async verifyPhoneOtp(@Request() req, @Body() body: { code: string }) {
+    return this.authService.verifyPhoneOtp(req.user.sub, body.code);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post('verify-phone-firebase')
+  async verifyPhoneFirebase(@Request() req, @Body() body: { idToken: string; phone: string }) {
+    return this.authService.verifyPhoneWithFirebase(req.user.sub, body.idToken, body.phone);
   }
 }

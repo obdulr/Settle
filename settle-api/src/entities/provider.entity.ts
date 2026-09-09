@@ -96,7 +96,7 @@ export class Provider {
   isAcceptingLeads!: boolean;
 
   // Stripe billing
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'stripe_customer_id' })
   stripeCustomerId?: string;
 
   // Subscription billing (marketplace seat plans)

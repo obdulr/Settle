@@ -64,4 +64,15 @@ export class CreateLeadDto {
 
   @IsBoolean()
   tcpaConsent!: boolean;
+
+  // TCPA consent audit metadata. The controller injects IP and user agent
+  // from the request; the frontend supplies the disclosure text and page
+  // version so the stored record proves exactly what the consumer saw.
+  @IsOptional()
+  @IsString()
+  consentLanguage?: string;
+
+  @IsOptional()
+  @IsString()
+  consentPageVersion?: string;
 }

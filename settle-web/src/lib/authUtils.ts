@@ -3,9 +3,15 @@
 import { clearToken, getToken, setToken } from './auth';
 
 const USER_KEY = 'settle_user_data';
+const REFRESH_TOKEN_KEY = 'settle_refresh_token';
 
 export function getStoredToken(): string | null {
   return getToken();
+}
+
+export function getStoredRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
 export function getStoredUser(): any {
@@ -19,16 +25,25 @@ export function getStoredUser(): any {
   }
 }
 
-export function storeAuth(token: string, user: any) {
+export function storeAuth(token: string, user: any, refreshToken?: string) {
   if (typeof window === 'undefined') return;
   setToken(token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  }
+}
+
+export function storeRefreshToken(refreshToken: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
 }
 
 export function clearAuth() {
   if (typeof window === 'undefined') return;
   clearToken();
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
 export function isAuthenticated(): boolean {

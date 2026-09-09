@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ProviderGuard } from '../auth/guards/provider.guard';
 import { ProvidersService } from './providers.service';
 import { CreateProviderDto } from './dto/create-provider.dto';
 import { UpdateProviderDto } from './dto/update-provider.dto';
@@ -41,7 +42,7 @@ export class ProvidersController {
   // Provider: update their own profile
   @SkipThrottle()
   @Put('profile')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ProviderGuard)
   async updateProfile(@Request() req, @Body() body: UpdateProviderDto) {
     return this.providersService.updateProvider(req.user.sub, body);
   }
@@ -49,7 +50,7 @@ export class ProvidersController {
   // Provider: get own stats
   @SkipThrottle()
   @Get('portal/stats')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ProviderGuard)
   async getStats(@Request() req) {
     return this.providersService.getProviderStats(req.user.sub);
   }

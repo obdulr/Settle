@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { startAuthentication } from '@simplewebauthn/browser';
 import { createJsonApiClient } from '@settle/shared-sdk/auth';
@@ -23,9 +23,37 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState('');
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
-  if (typeof window !== 'undefined' && isAuthenticated()) {
-    router.push('/dashboard');
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isAuthenticated()) {
+      router.replace('/dashboard');
+    } else {
+      setCheckingAuth(false);
+    }
+  }, [router]);
+
+  // Prefill email/mode from query string (e.g. after registration)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const m = params.get('mode');
+    const e = params.get('email');
+    const sent = params.get('sent');
+    const devCode = params.get('devCode');
+    if (e) setEmail(e);
+    if (m === 'otp') {
+      setMode('otp');
+      if (sent === '1') {
+        setOtpSent(true);
+        setInfo(devCode
+          ? `Dev mode — your code is: ${devCode}`
+          : 'Check your email for a 6-digit verification code.'
+        );
+      }
+    }
+  }, []);
+
+  if (checkingAuth) {
     return <LoadingSpinner />;
   }
 
@@ -38,6 +66,13 @@ export default function LoginPage() {
     },
   });
 
+  const redirectByRole = (role?: string) => {
+    if (role === 'admin') return '/admin';
+    if (role === 'sales') return '/sales';
+    if (role === 'provider') return '/portal';
+    return '/dashboard';
+  };
+
   // -- Password login --
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,14 +80,31 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await apiCall<{ success: boolean; accessToken?: string; user?: any; error?: string }>('/auth/login', {
+      const response = await apiCall<{
+        success: boolean;
+        accessToken?: string;
+        refreshToken?: string;
+        user?: any;
+        requiresVerification?: boolean;
+        email?: string;
+        devCode?: string;
+        message?: string;
+        error?: string;
+      }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
 
       if (response.success && response.accessToken) {
-        storeAuth(response.accessToken, response.user);
-        router.push(response.user?.role === 'provider' ? '/portal' : '/dashboard');
+        storeAuth(response.accessToken, response.user, response.refreshToken);
+        router.push(redirectByRole(response.user?.role));
+      } else if (response.success && response.requiresVerification) {
+        setMode('otp');
+        setOtpSent(true);
+        setInfo(response.devCode
+          ? `Dev mode — your code is: ${response.devCode}`
+          : response.message || 'Check your email for a 6-digit verification code.'
+        );
       } else {
         setError(response.error || 'Login failed');
       }
@@ -99,14 +151,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await apiCall<{ success: boolean; accessToken?: string; user?: any; error?: string }>('/auth/verify-otp', {
+      const response = await apiCall<{ success: boolean; accessToken?: string; refreshToken?: string; user?: any; error?: string }>('/auth/verify-otp', {
         method: 'POST',
         body: JSON.stringify({ email, code: otpCode }),
       });
 
       if (response.success && response.accessToken) {
-        storeAuth(response.accessToken, response.user);
-        router.push(response.user?.role === 'provider' ? '/portal' : '/dashboard');
+        storeAuth(response.accessToken, response.user, response.refreshToken);
+        router.push(redirectByRole(response.user?.role));
       } else {
         setError(response.error || 'Invalid code');
       }
@@ -130,6 +182,10 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email || undefined }),
       });
+      if (!optionsRes.ok) {
+        setError('Server error during passkey authentication. Please try again later.');
+        return;
+      }
       const options = await optionsRes.json();
 
       // Step 2: Start browser authentication (Touch ID, Face ID, security key, etc.)
@@ -148,16 +204,22 @@ export default function LoginPage() {
       const result = await verifyRes.json();
 
       if (result.success) {
-        storeAuth(result.accessToken, result.user);
-        router.push(result.user?.role === 'provider' ? '/portal' : '/dashboard');
+        storeAuth(result.accessToken, result.user, result.refreshToken);
+        router.push(redirectByRole(result.user?.role));
+      } else if (result.error?.includes('No passkey registered')) {
+        setError('No passkey found for this email. Register a passkey from your account settings first, or use password/OTP login.');
+      } else if (result.error?.includes('challenge mismatch')) {
+        setError('Passkey session expired. Please try again.');
       } else {
         setError(result.error || 'Passkey authentication failed');
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'NotAllowedError') {
-        setError('Passkey authentication was cancelled or not available');
+        setError('Passkey authentication was cancelled or not available on this device.');
+      } else if (err instanceof Error && err.message?.includes('No matching')) {
+        setError('No matching passkey found. Register a passkey first, or try a different login method.');
       } else {
-        setError('Passkey authentication failed. Make sure you have a passkey registered.');
+        setError('Passkey authentication failed. Make sure you have a passkey registered, or try password login.');
       }
     } finally {
       setLoading(false);

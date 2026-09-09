@@ -33,7 +33,7 @@ export default function Home() {
               </h1>
 
               <p className="text-xl text-blue-100 mb-8 max-w-lg leading-relaxed">
-                We're building the first marketplace for debt relief — compare providers side-by-side with transparent fees, real timelines, and no pressure. Take the free assessment to get started.
+                We're building the first marketplace for debt relief. Take the free assessment to join early access — we'll match you with vetted providers as our network grows.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -44,10 +44,10 @@ export default function Home() {
                   Take the Free Assessment →
                 </Link>
                 <Link
-                  href="/compare"
+                  href="/providers"
                   className="px-8 py-4 bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white text-lg font-semibold rounded-xl hover:bg-white/20 transition-all"
                 >
-                  How the Marketplace Works
+                  Join as a Provider
                 </Link>
               </div>
 
@@ -62,7 +62,7 @@ export default function Home() {
             {/* Right: Mini qualification widget */}
             <div className="bg-white rounded-2xl shadow-2xl p-6 lg:p-8 text-zinc-900">
               <div className="text-center mb-5">
-                <h2 className="text-xl font-bold text-zinc-900">See your options in 60 seconds</h2>
+                <h2 className="text-xl font-bold text-zinc-900">Check your eligibility in 60 seconds</h2>
                 <p className="text-sm text-zinc-500 mt-1">Start with your total debt — no personal info needed yet</p>
               </div>
 
@@ -126,7 +126,7 @@ export default function Home() {
               {
                 icon: '⚖️',
                 title: 'True Side-by-Side Comparison',
-                desc: 'See multiple providers with transparent fees, average savings, timelines, and verified reviews — all in one place. No more calling 5 different companies.',
+                desc: 'Once providers join, see multiple offers with transparent fees, average savings, timelines, and verified reviews — all in one place. No more calling 5 different companies.',
                 badge: 'No one else does this',
               },
               {
@@ -169,9 +169,9 @@ export default function Home() {
           <div className="grid md:grid-cols-4 gap-6">
             {[
               { step: '1', icon: '📝', title: 'Take the assessment', desc: 'Answer 7 quick questions about your debt. No SSN, no credit check, no obligation.' },
-              { step: '2', icon: '🎯', title: 'Get matched', desc: 'We match your profile to vetted providers who can help with your specific situation.' },
-              { step: '3', icon: '⚖️', title: 'Compare offers', desc: 'See real fees, timelines, and savings side-by-side. Ask questions before committing.' },
-              { step: '4', icon: '🕊️', title: 'Choose your path', desc: "Enroll when you're ready, or use our coaching tools to handle it yourself." },
+              { step: '2', icon: '🎯', title: 'Get matched', desc: 'Once providers join, we match your profile to vetted providers for your specific situation.' },
+              { step: '3', icon: '⚖️', title: 'Compare offers', desc: 'Compare real fees, timelines, and savings side-by-side as providers come online.' },
+              { step: '4', icon: '🕊️', title: 'Choose your path', desc: "Enroll with a provider when ready, or use our coaching tools while you wait." },
             ].map((item, idx) => (
               <div key={item.step} className="relative text-center">
                 {idx < 3 && (
@@ -210,45 +210,22 @@ export default function Home() {
           <div className="text-center mb-12">
             <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wide mb-3">The marketplace advantage</p>
             <h2 className="text-3xl sm:text-4xl font-black text-black dark:text-white mb-4">
-              See what providers would charge you — before you talk to anyone
+              Compare real providers side by side
             </h2>
             <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto">
-              Here's a preview of what the comparison will look like once our provider network is live.
+              Once our first vetted providers are live, you'll see transparent fees, verified ratings, and real timelines all in one place.
             </p>
           </div>
 
-          {/* Sample comparison table — clearly labeled as illustrative */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-            <div className="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs font-semibold text-center py-2">
-              Illustrative example — real comparisons will appear once providers join the network
-            </div>
-            <div className="grid grid-cols-4 bg-blue-600 text-white text-sm font-semibold">
-              <div className="p-4">Provider</div>
-              <div className="p-4 text-center">Fee</div>
-              <div className="p-4 text-center">Avg. Savings</div>
-              <div className="p-4 text-center">Timeline</div>
-            </div>
-            {[
-              { name: 'Provider A', fee: '15%', savings: '50%', timeline: '24 mo' },
-              { name: 'Provider B', fee: '18%', savings: '45%', timeline: '22 mo' },
-              { name: 'Provider C', fee: '20%', savings: '38%', timeline: '26 mo' },
-            ].map(p => (
-              <div key={p.name} className="grid grid-cols-4 border-t border-zinc-100 dark:border-zinc-800 text-sm">
-                <div className="p-4 font-semibold text-black dark:text-white">{p.name}</div>
-                <div className="p-4 text-center font-bold text-blue-600 dark:text-blue-400">{p.fee}</div>
-                <div className="p-4 text-center font-bold text-green-600 dark:text-green-400">{p.savings}</div>
-                <div className="p-4 text-center text-zinc-600 dark:text-zinc-400">{p.timeline}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center mt-8">
-            <Link
-              href="/compare"
-              className="inline-block px-8 py-3 border-2 border-blue-600 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950 transition-all"
-            >
-              See the Marketplace Page →
-            </Link>
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg border border-zinc-100 dark:border-zinc-800 p-12 text-center max-w-3xl mx-auto">
+            <h3 className="text-xl font-bold text-black dark:text-white mb-3">Our provider network is being built</h3>
+            <p className="text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto">
+              We're onboarding vetted debt relief providers. Check the{' '}
+              <Link href="/compare" className="text-blue-600 dark:text-blue-400 underline hover:text-blue-700">
+                marketplace page
+              </Link>{' '}
+              for live comparisons as soon as they join.
+            </p>
           </div>
         </div>
       </section>
@@ -460,6 +437,65 @@ export default function Home() {
             >
               See Pricing Plans
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          PORTAL LOGIN SECTION
+          - Visible entry points for consumers, providers, sales, admin
+          ============================================================ */}
+      <section className="py-16 px-4 bg-zinc-50 dark:bg-zinc-950">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10">
+            <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wide mb-3">Team & Partner Access</p>
+            <h2 className="text-3xl sm:text-4xl font-black text-black dark:text-white mb-4">Log in to your portal</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto">
+              Consumers, providers, sales agents, and administrators each have a dedicated portal to manage their experience.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                title: 'Consumer Login',
+                desc: 'View your debts, assessment results, and provider matches.',
+                href: '/login',
+                cta: 'Log In',
+              },
+              {
+                title: 'Provider Portal',
+                desc: 'Access matched leads, manage your profile, and purchase credits.',
+                href: '/login',
+                cta: 'Provider Login',
+              },
+              {
+                title: 'Sales CRM',
+                desc: 'Manage leads, track outreach, and update pipeline status.',
+                href: '/sales/login',
+                cta: 'Sales Login',
+              },
+              {
+                title: 'Admin Dashboard',
+                desc: 'Oversee users, providers, collections, and platform settings.',
+                href: '/login',
+                cta: 'Admin Login',
+              },
+            ].map((portal) => (
+              <div
+                key={portal.title}
+                className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              >
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">{portal.title}</h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 flex-grow">{portal.desc}</p>
+                <Link
+                  href={portal.href}
+                  className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  {portal.cta} →
+                </Link>
+              </div>
+            ))}
           </div>
         </div>
       </section>

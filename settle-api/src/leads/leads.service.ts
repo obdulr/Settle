@@ -5,6 +5,9 @@ import { Lead } from '../entities/lead.entity';
 import { ProvidersService } from '../providers/providers.service';
 import { MatchingService } from '../matching/matching.service';
 import { LeadScoringService } from '../ai/lead-scoring.service';
+import { CrmService } from '../crm/crm.service';
+import { CrmLeadSource } from '../entities/crm-lead.entity';
+import { CrmDealStage, CrmDealStatus } from '../entities/crm-deal.entity';
 import { EmailService } from '../email/email.service';
 
 @Injectable()
@@ -18,9 +21,22 @@ export class LeadsService {
     private matchingService: MatchingService,
     private leadScoringService: LeadScoringService,
     private emailService: EmailService,
+    private crmService: CrmService,
   ) {}
 
   async submitAssessment(data: Partial<Lead>): Promise<Lead> {
+    // TCPA consent is a hard legal requirement for debt-relief lead
+    // distribution. We must NOT default or force it to true — the consumer
+    // must have actively opted in, and we must preserve the audit metadata
+    // (disclosure text, IP, user agent, page version, timestamp) that proves
+    // what they agreed to. A lead without genuine consent cannot be sold or
+    // contacted.
+    if (!data.tcpaConsent) {
+      throw new BadRequestException(
+        'TCPA consent is required to submit an assessment. The consumer must actively agree to be contacted.',
+      );
+    }
+
     const score = this.calculateQualityScore(data);
 
     const expiresAt = new Date();
@@ -47,7 +63,13 @@ export class LeadsService {
       mlTier,
       status: score >= 40 ? 'available' : 'new',
       expiresAt,
-      tcpaConsent: true,
+      // Use the real consent value and audit metadata from the request —
+      // never force these. consentTimestamp records the moment of opt-in.
+      tcpaConsent: data.tcpaConsent,
+      consentLanguage: data.consentLanguage,
+      consentIp: data.consentIp,
+      consentUserAgent: data.consentUserAgent,
+      consentPageVersion: data.consentPageVersion,
       consentTimestamp: new Date(),
     });
 
@@ -58,6 +80,24 @@ export class LeadsService {
       await this.matchingService.findMatchesForLead(saved.id);
     } catch (error) {
       this.logger.error(`Auto-matching failed for lead ${saved.id}: ${error}`);
+    }
+
+    // Sync consumer assessment to CRM pipeline
+    try {
+      await this.crmService.createLead({
+        firstName: saved.firstName,
+        lastName: saved.lastName,
+        email: saved.email,
+        phone: saved.phone,
+        source: CrmLeadSource.ASSESSMENT,
+        userId: saved.userId ?? 'system',
+        groupId: saved.state,
+        consumerLeadId: saved.id,
+        score: saved.qualityScore,
+        aiScore: saved.mlScore,
+      });
+    } catch (error) {
+      this.logger.error(`CRM sync failed for lead ${saved.id}: ${error}`);
     }
 
     return saved;
@@ -94,11 +134,20 @@ export class LeadsService {
   }
 
   async getAvailableLeads() {
-    return this.leadsRepository.find({
+    const leads = await this.leadsRepository.find({
       where: { status: 'available' },
       order: { qualityScore: 'DESC', createdAt: 'DESC' },
       take: 50,
     });
+
+    // Mask sensitive PII (phone, email, lastName) for available leads that
+    // have not been purchased — mirrors the masking in getLeadDetails.
+    return leads.map((lead) => ({
+      ...lead,
+      phone: this.maskValue(lead.phone),
+      email: this.maskEmail(lead.email),
+      lastName: this.maskValue(lead.lastName),
+    }));
   }
 
   async purchaseLead(leadId: string, providerId: string): Promise<Lead> {
@@ -127,6 +176,40 @@ export class LeadsService {
       await this.emailService.sendLeadPurchaseConfirmation(provider as any, lead, price);
     } catch (err) {
       this.logger.error(`Failed to send lead purchase confirmation: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    // Sync lead purchase to CRM
+    try {
+      let crmClient = await this.crmService.findClientByGroupId(provider.id);
+      if (!crmClient) {
+        crmClient = await this.crmService.createClient({
+          firstName: provider.companyName,
+          lastName: 'Provider',
+          email: provider.email,
+          phone: provider.phone,
+          company: provider.companyName,
+          source: 'provider_marketplace',
+          userId: 'system',
+          groupId: provider.id,
+          assignedTo: provider.id,
+        });
+      }
+
+      await this.crmService.createDeal({
+        title: `Lead purchase: ${lead.firstName} ${lead.lastName}`,
+        description: `Purchased ${lead.state} lead with $${lead.totalDebt} total debt`,
+        clientId: crmClient.id,
+        stage: CrmDealStage.PURCHASE,
+        value: price,
+        status: CrmDealStatus.WON,
+        wonDate: new Date(),
+        assignedTo: provider.id,
+        userId: 'system',
+        groupId: provider.id,
+        tags: ['lead-purchase', `lead:${lead.id}`],
+      });
+    } catch (error) {
+      this.logger.error(`CRM sync failed for lead purchase ${leadId}: ${error}`);
     }
 
     return this.leadsRepository.findOne({ where: { id: leadId } }) as Promise<Lead>;
@@ -180,6 +263,18 @@ export class LeadsService {
     const provider = await this.providersService.getProviderById(providerId);
     let remainingCredit = Number(provider.creditBalance) || 0;
 
+    const crmClient = await this.crmService.findClientByGroupId(provider.id) ?? await this.crmService.createClient({
+      firstName: provider.companyName,
+      lastName: 'Provider',
+      email: provider.email,
+      phone: provider.phone,
+      company: provider.companyName,
+      source: 'provider_marketplace',
+      userId: 'system',
+      groupId: provider.id,
+      assignedTo: provider.id,
+    });
+
     const results: Array<{ leadId: string; success: boolean; price?: number; error?: string }> = [];
     const successful: Lead[] = [];
 
@@ -210,6 +305,25 @@ export class LeadsService {
       remainingCredit -= price;
       successful.push(lead);
       results.push({ leadId, success: true, price });
+
+      // Sync batch lead purchase to CRM
+      try {
+        await this.crmService.createDeal({
+          title: `Lead purchase: ${lead.firstName} ${lead.lastName}`,
+          description: `Purchased ${lead.state} lead with $${lead.totalDebt} total debt`,
+          clientId: crmClient.id,
+          stage: CrmDealStage.PURCHASE,
+          value: price,
+          status: CrmDealStatus.WON,
+          wonDate: new Date(),
+          assignedTo: provider.id,
+          userId: 'system',
+          groupId: provider.id,
+          tags: ['lead-purchase', `lead:${lead.id}`],
+        });
+      } catch (error) {
+        this.logger.error(`CRM sync failed for batch lead purchase ${leadId}: ${error}`);
+      }
     }
 
     return {

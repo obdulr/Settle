@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, FindManyOptions } from 'typeorm';
 import { Match } from '../entities/match.entity';
@@ -413,13 +413,34 @@ export class MatchingService {
 
   /**
    * Provider or consumer declines a match. Sets status to 'declined'.
+   * The caller's userId is verified against the match's providerId (for
+   * providers) or the lead's userId (for consumers) to ensure only an
+   * authorized party can decline a match.
    */
-  async declineMatch(matchId: string, userType: 'provider' | 'consumer'): Promise<Match> {
+  async declineMatch(
+    matchId: string,
+    userType: 'provider' | 'consumer',
+    userId: string,
+  ): Promise<Match> {
     const match = await this.matchesRepository.findOne({ where: { id: matchId } });
     if (!match) throw new NotFoundException('Match not found');
     if (match.status === 'purchased') {
       throw new BadRequestException('Cannot decline a purchased match');
     }
+
+    // Verify the caller is authorized to decline this match.
+    if (userType === 'provider') {
+      if (match.providerId !== userId) {
+        throw new ForbiddenException('You are not authorized to decline this match');
+      }
+    } else {
+      // Consumer: verify they own the lead associated with this match.
+      const lead = await this.leadsRepository.findOne({ where: { id: match.leadId } });
+      if (!lead || lead.userId !== userId) {
+        throw new ForbiddenException('You are not authorized to decline this match');
+      }
+    }
+
     match.status = 'declined';
     match.declinedAt = new Date();
     return this.matchesRepository.save(match);

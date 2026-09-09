@@ -114,8 +114,8 @@ const PLANS = [
   {
     id: 'marketplace_seat',
     name: 'Marketplace Seat',
-    price: '$1,500/month',
-    description: 'Listed on the comparison page + priority lead access.',
+    price: '$199/month',
+    description: 'Listed on the comparison page + priority lead access. 30-day free trial.',
     features: [
       'Everything in Pay Per Lead',
       'Company profile on /compare page',

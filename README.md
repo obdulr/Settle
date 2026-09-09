@@ -143,19 +143,28 @@ const profile = await api.auth.profile();
 
 ## Deployment
 
-### Railway (API)
-- Configuration: `railway.toml`
+### Primary: Render (API + Web)
+- Configuration: `render.yaml`
+- Health endpoints for the API: `/health`, `/`
+- API port: 4025
+- Web port: 3025
+- Environment variables in Render dashboard
+- Automatic deployments on main branch
+- Build API: `cd settle-api && pnpm install && pnpm run build`
+- Start API: `cd settle-api && pnpm run start`
+- Build Web: `cd settle-web && pnpm install && pnpm run build`
+- Start Web: `cd settle-web && pnpm run start`
+
+### Alternative: Railway (API)
+- Configuration: `railway.toml` and repo-level `Dockerfile`
 - Health endpoints: `/health`, `/`
 - Port: 4025
 - Build: `cd settle-api && pnpm install && pnpm run build`
 - Start: `cd settle-api && node dist/main`
 
-### Render (Web)
-- Configuration: `render.yaml`
-- Port: 3025
-- Environment variables in Render dashboard
-- Automatic deployments on main branch
-- Live URL: https://settle-e700.onrender.com
+### Alternative: Cloudflare Pages (Web)
+- Set `CF_PAGES=1` or `OUTPUT_EXPORT=1` during build for static export (`output: "export"` in `next.config.ts`)
+- Use `public/_redirects` and `public/_headers` for redirects and headers
 
 ### EAS (Mobile)
 - Configuration: `eas.json`

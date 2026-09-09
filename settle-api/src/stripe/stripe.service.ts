@@ -59,7 +59,10 @@ export class StripeService {
     private coachingSubscriptionsRepository: Repository<CoachingSubscription>,
   ) {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
-    this.stripe = new Stripe(secretKey || 'sk_test_dummy', {
+    if (!secretKey) {
+      this.logger.error('STRIPE_SECRET_KEY is not set — Stripe calls will fail until it is configured in environment variables.');
+    }
+    this.stripe = new Stripe(secretKey || 'sk_test_placeholder', {
       apiVersion: '2026-06-24.dahlia',
     });
   }
@@ -214,6 +217,7 @@ export class StripeService {
         seats: tier.seats.toString(),
       },
       subscription_data: {
+        trial_period_days: 30,
         metadata: {
           type: 'provider_subscription',
           providerId,
@@ -254,6 +258,7 @@ export class StripeService {
         type: 'coaching_subscription',
       },
       subscription_data: {
+        trial_period_days: 30,
         metadata: {
           userId,
           type: 'coaching_subscription',
@@ -311,12 +316,25 @@ export class StripeService {
 
   verifyWebhookSignature(payload: Buffer, signature: string): Stripe.Event {
     const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
-    const stripe = new Stripe(this.configService.get<string>('STRIPE_SECRET_KEY') || 'sk_test_dummy', {
+    if (!webhookSecret) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new BadRequestException('STRIPE_WEBHOOK_SECRET is not configured');
+      }
+      this.logger.error('STRIPE_WEBHOOK_SECRET is not set — webhook signature verification cannot succeed.');
+      throw new BadRequestException('Webhook secret is not configured');
+    }
+
+    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    if (!secretKey) {
+      throw new BadRequestException('STRIPE_SECRET_KEY is not configured');
+    }
+
+    const stripe = new Stripe(secretKey, {
       apiVersion: '2026-06-24.dahlia',
     });
 
     try {
-      return stripe.webhooks.constructEvent(payload, signature, webhookSecret || '');
+      return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`Webhook signature verification failed: ${message}`);
@@ -429,10 +447,10 @@ export class StripeService {
         await this.upsertCoachingSubscription(userId, subscriptionId, status, new Date());
         this.logger.log(`User ${userId} subscribed to coaching`);
 
-        // Send coaching welcome email
+        // Send coaching welcome email (respect notification preferences)
         try {
           const user = await this.usersRepository.findOne({ where: { id: userId } });
-          if (user) {
+          if (user && user.emailNotifications !== false) {
             await this.emailService.sendCoachingWelcome(user);
           }
         } catch (err) {
@@ -527,10 +545,10 @@ export class StripeService {
       await this.upsertCoachingSubscription(userId, subscription.id, 'canceled', undefined, new Date());
       this.logger.log(`User ${userId} coaching subscription canceled`);
 
-      // Send cancellation email
+      // Send cancellation email (respect notification preferences)
       try {
         const user = await this.usersRepository.findOne({ where: { id: userId } });
-        if (user) {
+        if (user && user.emailNotifications !== false) {
           await this.emailService.sendSubscriptionCancelled(user, 'coaching');
         }
       } catch (err) {
@@ -568,7 +586,7 @@ export class StripeService {
     if (type === 'coaching_subscription' && userId) {
       try {
         const user = await this.usersRepository.findOne({ where: { id: userId } });
-        if (user) {
+        if (user && user.emailNotifications !== false) {
           await this.emailService.sendPaymentFailed(user, 'coaching', amount);
         }
       } catch (err) {
@@ -593,7 +611,7 @@ export class StripeService {
     if (customerId && !userId && !providerId) {
       try {
         const user = await this.usersRepository.findOne({ where: { stripeCustomerId: customerId } });
-        if (user) {
+        if (user && user.emailNotifications !== false) {
           await this.emailService.sendPaymentFailed(user, 'coaching', amount);
           return;
         }

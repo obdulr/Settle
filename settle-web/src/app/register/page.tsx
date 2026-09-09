@@ -25,6 +25,7 @@ export default function RegisterPage() {
   const apiCall = createJsonApiClient({
     getBaseUrl: () => API_URL,
     getToken: () => null,
+    timeout: 0,
     onUnauthorized: () => {
       clearAuth();
       router.push('/login');
@@ -46,28 +47,52 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      setError('Password must contain uppercase, lowercase, number, and special character');
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await apiCall<{ success: boolean; accessToken?: string; user?: any; error?: string }>('/auth/register', {
+      const response = await apiCall<{
+        success: boolean;
+        accessToken?: string;
+        refreshToken?: string;
+        user?: any;
+        requiresVerification?: boolean;
+        email?: string;
+        devCode?: string;
+        message?: string;
+        error?: string;
+      }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ email, password, firstName, lastName }),
       });
 
       if (response.success && response.accessToken) {
-        storeAuth(response.accessToken, response.user);
+        storeAuth(response.accessToken, response.user, response.refreshToken);
         setInfo('Account created! You can now add a passkey for faster login.');
         router.push('/dashboard');
+      } else if (response.success && response.requiresVerification && response.email) {
+        const query = new URLSearchParams({ mode: 'otp', email: response.email, sent: '1' });
+        if (response.devCode) query.set('devCode', response.devCode);
+        router.push(`/login?${query.toString()}`);
       } else {
         setError(response.error || 'Registration failed');
       }
-    } catch {
-      setError('Registration failed. Email may already be in use.');
+    } catch (err) {
+      if (err instanceof Error && (err as any).name === 'AbortError') {
+        setError('Request was cancelled. This is often caused by a browser extension. Try disabling extensions or use an incognito window.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -87,18 +112,40 @@ export default function RegisterPage() {
 
     try {
       // Step 1: Create account with a random password (passkey-only account)
-      const tempPassword = crypto.randomUUID() + crypto.randomUUID();
-      const regRes = await apiCall<{ success: boolean; accessToken?: string; user?: any; error?: string }>('/auth/register', {
+      const tempPassword = `${crypto.randomUUID()}!A1a`;
+      const regRes = await apiCall<{
+        success: boolean;
+        accessToken?: string;
+        refreshToken?: string;
+        user?: any;
+        requiresVerification?: boolean;
+        email?: string;
+        devCode?: string;
+        message?: string;
+        error?: string;
+      }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ email, password: tempPassword, firstName, lastName }),
       });
 
-      if (!regRes.success || !regRes.accessToken) {
+      if (!regRes.success) {
         setError(regRes.error || 'Registration failed');
         return;
       }
 
-      storeAuth(regRes.accessToken, regRes.user);
+      if (regRes.requiresVerification && regRes.email) {
+        const query = new URLSearchParams({ mode: 'otp', email: regRes.email, sent: '1' });
+        if (regRes.devCode) query.set('devCode', regRes.devCode);
+        router.push(`/login?${query.toString()}`);
+        return;
+      }
+
+      if (!regRes.accessToken) {
+        setError('Registration failed');
+        return;
+      }
+
+      storeAuth(regRes.accessToken, regRes.user, regRes.refreshToken);
 
       // Step 2: Get passkey registration options
       const optionsRes = await fetch(`${API_URL}/auth/passkey/register/options`, {
@@ -135,7 +182,7 @@ export default function RegisterPage() {
       if (err instanceof Error && err.name === 'NotAllowedError') {
         setError('Passkey registration was cancelled');
       } else {
-        setError('Registration failed. Email may already be in use.');
+        setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
       }
     } finally {
       setLoading(false);

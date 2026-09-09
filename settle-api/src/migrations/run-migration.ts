@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { dataSource } from '../data-source';
 import { CreateUsers1700000000000 } from './1700000000000-CreateUsers';
@@ -9,6 +10,24 @@ import { FixPasskeyColumns1700000000005 } from './1700000000005-FixPasskeyColumn
 import { AddLeadQualityTier1700000000006 } from './1700000000006-AddLeadQualityTier';
 import { CreateCoachingEntities1700000000007 } from './1700000000007-CreateCoachingEntities';
 import { AddMatchEmailSentAtAndProviderEmailVerified1700000000008 } from './1700000000008-AddMatchEmailSentAtAndProviderEmailVerified';
+import { CreateMatches1700000000007_5 } from './1700000000007-CreateMatches';
+import { AddMissingUserColumns1700000000009 } from './1700000000009-AddMissingUserColumns';
+import { CreateDeposits1700000000010 } from './1700000000010-CreateDeposits';
+import { AddPhoneOtpColumns1700000000011 } from './1700000000011-AddPhoneOtpColumns';
+import { AddNotificationPreferences1700000000012 } from './1700000000012-AddNotificationPreferences';
+import { AddLeadConsentAuditColumns1700000000012 } from './1700000000012-AddLeadConsentAuditColumns';
+import { CreateCrmTables1700000000013 } from './1700000000013-CreateCrmTables';
+import { AddUserDeletedAt1700000000014 } from './1700000000014-AddUserDeletedAt';
+import { CreateRefreshTokens1700000000015 } from './1700000000015-CreateRefreshTokens';
+import { AddUserSecurityColumns1700000000016 } from './1700000000016-AddUserSecurityColumns';
+import { CreateDebtSettlementCrmTables1700000000017 } from './1700000000017-CreateDebtSettlementCrmTables';
+import { AddProviderStripeColumns1700000000018 } from './1700000000018-AddProviderStripeColumns';
+import { AddSalesLeadColumns1700000000019 } from './1700000000019-AddSalesLeadColumns';
+import { CreateCollectionTables1700000000020 } from './1700000000020-CreateCollectionTables';
+import { CreateSkipTraceTables1700000000021 } from './1700000000021-CreateSkipTraceTables';
+import { CreateCallLogTables1700000000022 } from './1700000000022-CreateCallLogTables';
+import { CreateCreditReportTables1700000000023 } from './1700000000023-CreateCreditReportTables';
+import { CreateBackgroundCheckTables1700000000024 } from './1700000000024-CreateBackgroundCheckTables';
 
 type MigrationConstructor = new () => MigrationInterface;
 
@@ -22,7 +41,25 @@ const migrations: MigrationConstructor[] = [
   FixPasskeyColumns1700000000005,
   AddLeadQualityTier1700000000006,
   CreateCoachingEntities1700000000007,
+  CreateMatches1700000000007_5,
   AddMatchEmailSentAtAndProviderEmailVerified1700000000008,
+  AddMissingUserColumns1700000000009,
+  CreateDeposits1700000000010,
+  AddPhoneOtpColumns1700000000011,
+  AddNotificationPreferences1700000000012,
+  AddLeadConsentAuditColumns1700000000012,
+  CreateCrmTables1700000000013,
+  AddUserDeletedAt1700000000014,
+  CreateRefreshTokens1700000000015,
+  AddUserSecurityColumns1700000000016,
+  CreateDebtSettlementCrmTables1700000000017,
+  AddProviderStripeColumns1700000000018,
+  AddSalesLeadColumns1700000000019,
+  CreateCollectionTables1700000000020,
+  CreateSkipTraceTables1700000000021,
+  CreateCallLogTables1700000000022,
+  CreateCreditReportTables1700000000023,
+  CreateBackgroundCheckTables1700000000024,
 ];
 
 async function ensureMigrationsTable(queryRunner: QueryRunner): Promise<void> {

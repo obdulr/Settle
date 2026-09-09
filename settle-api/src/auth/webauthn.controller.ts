@@ -1,4 +1,4 @@
-import { Controller, Post, Delete, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, UseGuards, Request } from '@nestjs/common';
 import { WebAuthnService } from './webauthn.service';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -32,7 +32,7 @@ export class WebAuthnController {
 
   // Step 2: Verify authentication response and issue JWT
   @Post('authenticate/verify')
-  async authVerify(@Body() body: { email: string; credential: any; challenge: string }) {
+  async authVerify(@Request() req, @Body() body: { email: string; credential: any; challenge: string }) {
     const result = await this.webauthnService.verifyAuthentication(
       body.email,
       body.credential,
@@ -44,7 +44,10 @@ export class WebAuthnController {
     }
 
     // Issue JWT tokens
-    const tokens = await this.authService.generateTokensForUser(result.user);
+    const tokens = await this.authService.generateTokensForUser(result.user, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
     return {
       success: true,
       ...tokens,
@@ -58,6 +61,13 @@ export class WebAuthnController {
         createdAt: result.user.createdAt,
       },
     };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('status')
+  async passkeyStatus(@Request() req) {
+    const hasPasskey = await this.webauthnService.hasPasskey(req.user.sub);
+    return { hasPasskey };
   }
 
   @UseGuards(JwtAuthGuard)

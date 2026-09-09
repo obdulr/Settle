@@ -1,5 +1,6 @@
 import { Controller, Post, Body, Req, Headers, UseGuards, BadRequestException } from '@nestjs/common';
 import { Request } from 'express';
+import Stripe from 'stripe';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { StripeService, CREDIT_PACKAGES } from './stripe.service';
 
@@ -29,7 +30,46 @@ export class StripeController {
     if (!returnUrl) {
       throw new BadRequestException('returnUrl is required');
     }
-    return this.stripeService.createCoachingCheckoutSession(req.user, returnUrl);
+    const session = await this.stripeService.createCoachingCheckoutSession(req.user, returnUrl);
+    return { url: session.url, sessionId: session.id };
+  }
+
+  @Post('lead-checkout')
+  @UseGuards(JwtAuthGuard)
+  async createLeadCheckout(
+    @Req() req: Request & { user: any },
+    @Body('leadId') leadId: string,
+  ) {
+    if (!leadId) {
+      throw new BadRequestException('leadId is required');
+    }
+    const session = await this.stripeService.createLeadCheckoutSession(leadId, req.user.sub);
+    return { url: session.url, sessionId: session.id };
+  }
+
+  @Post('provider-subscription')
+  @UseGuards(JwtAuthGuard)
+  async createProviderSubscription(
+    @Req() req: Request & { user: any },
+    @Body('tierId') tierId: string,
+  ) {
+    if (!tierId) {
+      throw new BadRequestException('tierId is required');
+    }
+    const session = await this.stripeService.createProviderSubscriptionSession(req.user.sub, tierId);
+    return { url: session.url, sessionId: session.id };
+  }
+
+  @Post('billing-portal')
+  @UseGuards(JwtAuthGuard)
+  async createBillingPortal(@Req() req: Request & { user: any }) {
+    let session: Stripe.BillingPortal.Session;
+    if (req.user.role === 'provider') {
+      session = await this.stripeService.createProviderBillingPortalSession(req.user.sub);
+    } else {
+      session = await this.stripeService.createCoachingBillingPortalSession(req.user.sub);
+    }
+    return { url: session.url };
   }
 
   @Post('webhook')

@@ -9,14 +9,50 @@ import { Budget } from './entities/budget.entity';
 import { BudgetItem } from './entities/budget-item.entity';
 import { Goal } from './entities/goal.entity';
 import { CoachingSubscription } from './entities/coaching-subscription.entity';
+import { CrmLead } from './entities/crm-lead.entity';
+import { CrmDeal } from './entities/crm-deal.entity';
+import { CrmClient } from './entities/crm-client.entity';
+import { Deposit } from './entities/deposit.entity';
+import { CollectionAccount } from './entities/collection-account.entity';
+import { DebtorProfile } from './entities/debtor-profile.entity';
+import { CollectionNote } from './entities/collection-note.entity';
+import { SkipTraceResult } from './entities/skip-trace-result.entity';
+import { CallLog } from './entities/call-log.entity';
+import { CreditReport } from './entities/credit-report.entity';
+import { BackgroundCheck } from './entities/background-check.entity';
 
 export const dataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('railway')
-    ? { rejectUnauthorized: false }
-    : false,
-  entities: [User, Activity, Debt, Provider, Lead, Match, Budget, BudgetItem, Goal, CoachingSubscription],
+  // Match the SSL logic used by AppModule so the migration runner works on
+  // Render (and any host) — not just Railway. If a custom CA is provided, use
+  // it; otherwise allow self-signed certificates which Render requires.
+  ssl: process.env.DATABASE_SSL_CA
+    ? { ca: process.env.DATABASE_SSL_CA }
+    : { rejectUnauthorized: false },
+  entities: [
+    User,
+    Activity,
+    Debt,
+    Provider,
+    Lead,
+    Match,
+    Budget,
+    BudgetItem,
+    Goal,
+    CoachingSubscription,
+    CrmLead,
+    CrmDeal,
+    CrmClient,
+    Deposit,
+    CollectionAccount,
+    DebtorProfile,
+    CollectionNote,
+    SkipTraceResult,
+    CallLog,
+    CreditReport,
+    BackgroundCheck,
+  ],
   synchronize: false,
   logging: process.env.NODE_ENV === 'development',
 });

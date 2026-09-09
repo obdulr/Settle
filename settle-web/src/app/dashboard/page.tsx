@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createJsonApiClient } from '@settle/shared-sdk/auth';
-import { getStoredToken, getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
+import { getAuthenticatedApi } from '../../lib/api';
+import { getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
 import ComplianceDisclosure from '../../components/ComplianceDisclosure';
 
 interface UserProfile {
@@ -29,22 +29,8 @@ export default function DashboardPage() {
     }
 
     const fetchProfile = async () => {
-      const token = getStoredToken();
-      
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       try {
-        const apiCall = createJsonApiClient({
-          getBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4025',
-          getToken: () => token,
-          onUnauthorized: () => {
-            clearAuth();
-            router.push('/login');
-          },
-        });
+        const apiCall = getAuthenticatedApi();
 
         const response = await apiCall<UserProfile>('/auth/profile', {
           method: 'GET',
@@ -143,7 +129,7 @@ export default function DashboardPage() {
                 Manage Debts
               </a>
               <a
-                href="/profile"
+                href="/settings"
                 className="block w-full py-2 px-4 bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-600 text-center"
               >
                 Edit Profile
@@ -171,14 +157,20 @@ export default function DashboardPage() {
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">Debt Tracking</span>
                 <span className="text-yellow-600 dark:text-yellow-400 font-medium">Start Now</span>
               </div>
-              <div className="flex items-center justify-between">
+              <a
+                href="/learn"
+                className="flex items-center justify-between rounded-md -mx-2 px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              >
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">Financial Education</span>
-                <span className="text-gray-400 dark:text-gray-500 font-medium">Coming Soon</span>
-              </div>
-              <div className="flex items-center justify-between">
+                <span className="text-blue-600 dark:text-blue-400 font-medium">Explore →</span>
+              </a>
+              <a
+                href="/settlement"
+                className="flex items-center justify-between rounded-md -mx-2 px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              >
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">Debt Settlement</span>
-                <span className="text-gray-400 dark:text-gray-500 font-medium">Coming Soon</span>
-              </div>
+                <span className="text-blue-600 dark:text-blue-400 font-medium">View Program →</span>
+              </a>
               <a
                 href="/coaching"
                 className="flex items-center justify-between rounded-md -mx-2 px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"

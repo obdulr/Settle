@@ -4,13 +4,19 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-## SMS Provider: Telnyx ONLY
+## SMS / Phone Authentication Providers
 
-**NEVER use Twilio.** Twilio is not used in any project. All SMS, MMS, and messaging functionality uses **Telnyx** exclusively.
+**Never use Twilio.**
 
-- Use the Telnyx API (`https://api.telnyx.com/v2/messages`) for sending SMS
-- Env vars: `TELNYX_API_KEY`, `TELNYX_FROM_NUMBER`, `TELNYX_MESSAGING_PROFILE_ID`
-- Do not suggest, install, or reference Twilio in any code, config, or documentation
+### Direct SMS
+- Use the Telnyx API (`https://api.telnyx.com/v2/messages`) for direct SMS/MMS.
+- Env vars: `TELNYX_API_KEY`, `TELNYX_FROM_NUMBER`
+
+### Phone OTP / Verification
+- Telnyx remains the default backend-driven OTP provider.
+- **Firebase Phone Authentication** may be used as an alternative for phone verification (especially when Telnyx is cost-prohibitive). It handles SMS delivery and reCAPTCHA client-side and is verified server-side with `firebase-admin`.
+- Backend env var: `FIREBASE_SERVICE_ACCOUNT` (single-line service-account JSON)
+- Frontend env vars: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`
 
 # Project Standardization
 
@@ -35,16 +41,20 @@ This project uses **pnpm** as the package manager (NOT npm or yarn).
 
 ## Deployment Architecture
 
-**Backend**: Railway (PostgreSQL database + NestJS API service)
-**Frontend**: Railway (Next.js web service)
+The project supports multiple deployment targets. The primary setup uses **Render** for both services, with optional **Railway** (backend) and **Cloudflare Pages** (frontend) alternatives.
 
-Both services are deployed on Railway. The project uses two Railway services:
-1. **API service** — built from `settle-api/`, uses `railway.toml` at repo root
-2. **Web service** — built from `settle-web/`, uses `settle-web/railway.web.toml`
-3. **Postgres service** — Railway-managed PostgreSQL database
+### Primary: Render (both services)
+- **API service** — built from `settle-api/`, configured in `render.yaml`
+- **Web service** — built from `settle-web/`, configured in `render.yaml` (uses Next.js `output: "standalone"`)
+- **Database** — external PostgreSQL (e.g., Supabase), connected via `DATABASE_URL` set in the Render dashboard
 
-The API connects to Postgres via `DATABASE_URL` (auto-injected by Railway).
-The web service connects to the API via `NEXT_PUBLIC_API_URL` (set in Railway dashboard).
+### Alternative: Railway (backend API)
+- **API service** — built from `settle-api/`, uses `railway.toml` at repo root with the repo-level `Dockerfile`
+- The database is the same external PostgreSQL instance configured via `DATABASE_URL`
+
+### Alternative: Cloudflare Pages (frontend)
+- Set `CF_PAGES=1` or `OUTPUT_EXPORT=1` during the build to enable static export (`output: "export"` in `settle-web/next.config.ts`)
+- Use `public/_redirects` and `public/_headers` for redirects and headers
 
 ## Port Assignments
 
@@ -53,8 +63,8 @@ The web service connects to the API via `NEXT_PUBLIC_API_URL` (set in Railway da
 - **Backend (settle-api)**: Port 4025
 
 **Production URLs:**
-- **Frontend**: Railway web service URL (configured in Railway dashboard)
-- **Backend**: Railway API service URL (configured in Railway dashboard)
+- **Frontend**: Render web service URL, Cloudflare Pages URL, or custom domain configured in the dashboard
+- **Backend**: Render or Railway API service URL configured in the respective dashboard
 
 **Environment Variables:**
 - `NEXT_PUBLIC_API_URL`: Backend API URL for frontend
