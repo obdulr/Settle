@@ -6,8 +6,11 @@ import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { User } from '../entities/user.entity';
 import { Provider } from '../entities/provider.entity';
+import { RefreshToken } from '../entities/refresh-token.entity';
 import { ActivitiesService } from '../activities/activities.service';
 import { EmailService } from '../email/email.service';
+import { TelnyxService } from './telnyx.service';
+import { FirebaseService } from '../firebase/firebase.service';
 import { RegisterDto } from './dtos/register.dto';
 
 // Mock the email service module — the repo has an extensionless
@@ -22,10 +25,26 @@ jest.mock('../email/email.service', () => ({
   })),
 }));
 
+// Mock FirebaseService to avoid loading firebase-admin (jose ESM breaks Jest)
+jest.mock('../firebase/firebase.service', () => ({
+  FirebaseService: jest.fn().mockImplementation(() => ({
+    verifyIdToken: jest.fn(),
+    sendSms: jest.fn(),
+  })),
+}));
+
+// Mock TelnyxService to avoid loading the Telnyx SDK in tests
+jest.mock('./telnyx.service', () => ({
+  TelnyxService: jest.fn().mockImplementation(() => ({
+    sendSms: jest.fn().mockResolvedValue(true),
+  })),
+}));
+
 describe('AuthService', () => {
   let service: AuthService;
   let usersRepository: any;
   let providersRepository: any;
+  let refreshTokensRepository: any;
   let jwtService: any;
   let activitiesService: any;
   let emailService: any;
@@ -40,6 +59,14 @@ describe('AuthService', () => {
     };
     providersRepository = {
       findOne: jest.fn(),
+    };
+    refreshTokensRepository = {
+      findOne: jest.fn(),
+      save: jest.fn(),
+      find: jest.fn(),
+      update: jest.fn(),
+      create: jest.fn(),
+      createQueryBuilder: jest.fn(),
     };
     jwtService = {
       sign: jest.fn().mockReturnValue('mock-jwt-token'),
@@ -60,9 +87,12 @@ describe('AuthService', () => {
         AuthService,
         { provide: getRepositoryToken(User), useValue: usersRepository },
         { provide: getRepositoryToken(Provider), useValue: providersRepository },
+        { provide: getRepositoryToken(RefreshToken), useValue: refreshTokensRepository },
         { provide: JwtService, useValue: jwtService },
         { provide: ActivitiesService, useValue: activitiesService },
         { provide: EmailService, useValue: emailService },
+        { provide: TelnyxService, useValue: { sendSms: jest.fn().mockResolvedValue(true) } },
+        { provide: FirebaseService, useValue: { verifyIdToken: jest.fn() } },
       ],
     }).compile();
 
@@ -94,7 +124,7 @@ describe('AuthService', () => {
   // ═════════════════════════════════════════════════════════════════════
   describe('Auth flow', () => {
     describe('register', () => {
-      it('registers a new user and returns JWT tokens', async () => {
+      it('registers a new user and requires email verification', async () => {
         usersRepository.findOne.mockResolvedValue(null);
         const createdUser = { id: 'new-user-id', email: 'new@test.com', role: 'customer', firstName: 'New', lastName: 'User' };
         usersRepository.create.mockReturnValue(createdUser);
@@ -110,11 +140,9 @@ describe('AuthService', () => {
         const result = await service.register(dto);
 
         expect(result.success).toBe(true);
-        expect(result.accessToken).toBeDefined();
-        expect(result.refreshToken).toBeDefined();
-        expect(result.expiresIn).toBe(3600);
-        expect(result.user.email).toBe('new@test.com');
-        expect(jwtService.sign).toHaveBeenCalledTimes(2); // access + refresh
+        expect(result.requiresVerification).toBe(true);
+        expect(result.email).toBe('new@test.com');
+        expect(result.message).toBeDefined();
       });
 
       it('rejects duplicate email registration', async () => {
@@ -130,9 +158,8 @@ describe('AuthService', () => {
     });
 
     describe('login', () => {
-      it('logs in a valid user and returns tokens', async () => {
-        const mockUser = await createMockUser();
-        // login() receives the user object from validateUser (password stripped)
+      it('logs in a verified user and returns tokens', async () => {
+        const mockUser = await createMockUser({ emailVerified: true });
         const { password: _, ...userWithoutPassword } = mockUser;
 
         const result = await service.login(userWithoutPassword);
@@ -149,8 +176,19 @@ describe('AuthService', () => {
         );
       });
 
+      it('requires verification for unverified users', async () => {
+        const mockUser = await createMockUser({ emailVerified: false });
+        const { password: _, ...userWithoutPassword } = mockUser;
+
+        const result: any = await service.login(userWithoutPassword);
+
+        expect(result.success).toBe(true);
+        expect(result.requiresVerification).toBe(true);
+        expect(result.email).toBe('test@example.com');
+      });
+
       it('does not log activity for provider role', async () => {
-        const providerUser = { id: 'p1', email: 'p@test.com', role: 'provider', firstName: 'Corp', lastName: '' };
+        const providerUser = { id: 'p1', email: 'p@test.com', role: 'provider', firstName: 'Corp', lastName: '', emailVerified: true };
 
         const result = await service.login(providerUser);
 
@@ -183,6 +221,8 @@ describe('AuthService', () => {
         const mockUser = await createMockUser();
         jwtService.verify.mockReturnValue({ sub: mockUser.id, email: mockUser.email });
         usersRepository.findOne.mockResolvedValue(mockUser);
+        refreshTokensRepository.findOne.mockResolvedValue({ id: 'token-1', userId: mockUser.id, revokedAt: null });
+        refreshTokensRepository.save.mockResolvedValue(true);
 
         const result = await service.refreshToken('valid-refresh-token');
 
@@ -205,6 +245,7 @@ describe('AuthService', () => {
 
       it('rejects a refresh token for a deleted user', async () => {
         jwtService.verify.mockReturnValue({ sub: 'deleted-user' });
+        refreshTokensRepository.findOne.mockResolvedValue({ id: 'token-1', userId: 'deleted-user', revokedAt: null });
         usersRepository.findOne.mockResolvedValue(null);
 
         await expect(service.refreshToken('token')).rejects.toThrow(UnauthorizedException);
@@ -213,7 +254,9 @@ describe('AuthService', () => {
 
     describe('logout', () => {
       it('returns success', async () => {
-        const result = await service.logout();
+        refreshTokensRepository.update.mockResolvedValue(true);
+
+        const result = await service.logout('some-refresh-token');
 
         expect(result.success).toBe(true);
         expect(result.message).toContain('Logged out');
@@ -346,6 +389,7 @@ describe('AuthService', () => {
 
     it('returns null when user does not exist', async () => {
       usersRepository.findOne.mockResolvedValue(null);
+      providersRepository.findOne.mockResolvedValue(null);
 
       const result = await service.validateUser('nobody@test.com', 'anypassword');
       expect(result).toBeNull();
