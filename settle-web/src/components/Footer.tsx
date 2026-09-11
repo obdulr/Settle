@@ -64,7 +64,7 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-semibold text-sm mb-4">Sales Team</h3>
             <ul className="space-y-2 text-sm text-zinc-400">
-              <li><Link href="/sales/login" className="hover:text-white transition-colors">Sales CRM Login</Link></li>
+              <li><Link href="/sales/login" className="hover:text-white transition-colors">Sales Team Login</Link></li>
               <li><Link href="/sales" className="hover:text-white transition-colors">CRM Dashboard</Link></li>
               <li><Link href="/collections" className="hover:text-white transition-colors">Collections</Link></li>
               <li><Link href="/admin" className="hover:text-white transition-colors">Admin Panel</Link></li>

@@ -88,7 +88,7 @@ export default function SalesLoginPage() {
           <Link href="/" className="inline-block text-xl font-bold text-blue-600 mb-2">
             Settle<span className="text-blue-400">InPeace</span>
           </Link>
-          <h1 className="text-2xl font-bold text-black dark:text-white">Sales CRM Login</h1>
+          <h1 className="text-2xl font-bold text-black dark:text-white">Sales Team Login</h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">For sales agents and admin staff</p>
         </div>
 
