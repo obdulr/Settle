@@ -36,16 +36,41 @@ cd settle-web && pnpm cf:preview
 - `settle-web/open-next.config.ts` — OpenNext adapter config
 - `settle-web/scripts/cf-build.sh` — Build script (handles monorepo + AppleDouble cleanup)
 
-## Custom Domain Setup (future)
+## Custom Domain Setup (DONE)
 
-To point `www.settleinpeace.com` at the Worker:
-1. Add the zone `settleinpeace.com` to Cloudflare (if not already)
-2. Add routes to `wrangler.jsonc`:
-   ```jsonc
-   "routes": [
-     { "pattern": "settleinpeace.com/*", "custom_domain": true },
-     { "pattern": "www.settleinpeace.com/*", "custom_domain": true }
-   ]
-   ```
-3. Redeploy: `pnpm cf:deploy`
-4. Update CORS_ORIGINS on the Render API to include the custom domain
+Custom domains are configured for the Worker:
+
+- `settleinpeace.com` → Worker `settleinpeace` (custom domain, SSL auto-provisioned)
+- `www.settleinpeace.com` → Worker `settleinpeace` (custom domain, SSL auto-provisioned)
+- `api.settleinpeace.com` → CNAME to `settle-api.onrender.com` (proxied through Cloudflare)
+
+### Zone Details
+
+- **Zone ID:** `0984d657ead0b063e4dedc4d414892af`
+- **Zone Status:** `pending` (nameservers not yet changed at registrar)
+- **Cloudflare Nameservers (NEW):** `coby.ns.cloudflare.com`, `liz.ns.cloudflare.com`
+- **Previous Nameservers (OLD, from notyced account):** `liv.ns.cloudflare.com`, `nero.ns.cloudflare.com`
+
+### Action Required at Registrar
+
+Change the nameservers for `settleinpeace.com` at the domain registrar:
+
+| Old Nameserver | New Nameserver |
+|----------------|----------------|
+| `liv.ns.cloudflare.com` | `coby.ns.cloudflare.com` |
+| `nero.ns.cloudflare.com` | `liz.ns.cloudflare.com` |
+
+Once the nameservers propagate (can take up to 24-48 hours), the zone status will change from `pending` to `active`, and `settleinpeace.com` / `www.settleinpeace.com` will serve the Worker.
+
+### Email Records (Preserved)
+
+- MX records: `route1/2/3.mx.cloudflare.net` (Cloudflare Email Routing)
+- SPF: `v=spf1 include:_spf.mx.cloudflare.net ~all`
+- DKIM: `cf2024-1._domainkey` and `default._domainkey`
+- DMARC: `v=DMARC1; p=quarantine; ...`
+
+### After Nameserver Propagation
+
+1. Verify `https://settleinpeace.com` loads the frontend
+2. Verify `https://api.settleinpeace.com/health` returns 200 from Render
+3. Update `CORS_ORIGINS` on the Render API to include `https://www.settleinpeace.com,https://settleinpeace.com`
