@@ -402,6 +402,14 @@ export default function LoginPage() {
               <Link href="/forgot-password" className="text-blue-600 hover:underline">Forgot password?</Link>
             </p>
           )}
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+            Sales team member?{' '}
+            <Link href="/sales/login" className="text-blue-600 hover:underline font-medium">Sales CRM Login →</Link>
+          </p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Debt relief provider?{' '}
+            <Link href="/portal" className="text-blue-600 hover:underline font-medium">Provider Portal →</Link>
+          </p>
         </div>
       </div>
     </div>

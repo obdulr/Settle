@@ -20,7 +20,7 @@ export default function SalesLoginPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined' && isAuthenticated()) {
-      router.replace('/collections');
+      router.replace('/sales');
     } else {
       setCheckingAuth(false);
     }
@@ -64,7 +64,7 @@ export default function SalesLoginPage() {
           return;
         }
         storeAuth(response.accessToken, response.user, response.refreshToken);
-        router.push('/collections');
+        router.push('/sales');
       } else {
         setError(response.error || 'Login failed');
       }
@@ -80,8 +80,8 @@ export default function SalesLoginPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-50 dark:bg-black px-4">
-      <div className="w-full max-w-md p-8 bg-white dark:bg-zinc-900 rounded-2xl shadow-lg">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-zinc-900 via-black to-zinc-900 px-4">
+      <div className="w-full max-w-md p-8 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl">
 
         {/* Header */}
         <div className="text-center mb-6">
@@ -102,6 +102,7 @@ export default function SalesLoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              placeholder="sales@settleinpeace.com"
               className="w-full px-3 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800 dark:text-white"
             />
           </div>
@@ -124,11 +125,30 @@ export default function SalesLoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="mt-6 space-y-2 text-center text-sm text-zinc-600 dark:text-zinc-400">
           <p>
             Not a sales user?{' '}
             <Link href="/login" className="text-blue-600 hover:underline font-medium">Customer / Provider Login</Link>
           </p>
+          <p>
+            <Link href="/" className="text-zinc-500 hover:text-zinc-300">← Back to website</Link>
+          </p>
+        </div>
+
+        {/* Feature highlights */}
+        <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">📞</div>
+            <div className="text-xs text-zinc-500 mt-1">Built-in Dialer</div>
+          </div>
+          <div>
+            <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">✉️</div>
+            <div className="text-xs text-zinc-500 mt-1">Email Leads</div>
+          </div>
+          <div>
+            <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">📅</div>
+            <div className="text-xs text-zinc-500 mt-1">Calendar</div>
+          </div>
         </div>
       </div>
     </div>
