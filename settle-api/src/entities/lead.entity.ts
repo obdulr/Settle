@@ -132,4 +132,10 @@ export class Lead {
 
   @Column({ type: 'timestamp', name: 'sales_agent_assigned_at', nullable: true })
   salesAgentAssignedAt?: Date;
+
+  @Column({ type: 'timestamp', name: 'follow_up_date', nullable: true })
+  followUpDate?: Date;
+
+  @Column({ type: 'timestamp', name: 'last_contacted_at', nullable: true })
+  lastContactedAt?: Date;
 }
