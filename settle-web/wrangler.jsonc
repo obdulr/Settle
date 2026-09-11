@@ -1,0 +1,13 @@
+{
+  "name": "settleinpeace",
+  "account_id": "23b969235059f30399650fc6ae16b77a",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets"
+  },
+  "vars": {
+    "NEXT_PUBLIC_API_URL": "https://api.settleinpeace.com"
+  }
+}

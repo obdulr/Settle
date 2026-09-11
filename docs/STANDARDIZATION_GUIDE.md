@@ -374,6 +374,36 @@ Build Command: pnpm install && pnpm run build
 Start Command: pnpm start
 ```
 
+### Cloudflare Workers Deployment (Frontend via OpenNext)
+
+For projects deploying the Next.js frontend to Cloudflare Workers using the OpenNext adapter (`@opennextjs/cloudflare`):
+
+**Prerequisites**:
+- Next.js >= 16.3.3 (required by OpenNext)
+- `@opennextjs/cloudflare` and `wrangler` as dev dependencies
+- Cloudflare account with Workers Scripts:Edit permission
+
+**Config files**:
+- `wrangler.jsonc` — Worker configuration (name, account_id, nodejs_compat, main, assets)
+- `open-next.config.ts` — OpenNext adapter config (wrapper, converter, cache settings)
+- `scripts/cf-build.sh` — Build script (builds shared packages, then Next.js, then OpenNext bundle)
+
+**package.json scripts**:
+```json
+"cf:build": "bash scripts/cf-build.sh",
+"cf:deploy": "node node_modules/@opennextjs/cloudflare/dist/cli/index.js deploy",
+"cf:preview": "node node_modules/@opennextjs/cloudflare/dist/cli/index.js preview"
+```
+
+**Deploy commands**:
+```bash
+cd project-web
+CLOUDFLARE_API_TOKEN=<token> pnpm cf:build
+CLOUDFLARE_API_TOKEN=<token> pnpm cf:deploy
+```
+
+**Environment variables**: Set as Worker vars (in `wrangler.jsonc`) or secrets (via Cloudflare API or dashboard).
+
 **Health Endpoints**:
 - `/health` - Primary health check
 - `/api/health` - Fallback health check

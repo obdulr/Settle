@@ -41,20 +41,33 @@ This project uses **pnpm** as the package manager (NOT npm or yarn).
 
 ## Deployment Architecture
 
-The project supports multiple deployment targets. The primary setup uses **Render** for both services, with optional **Railway** (backend) and **Cloudflare Pages** (frontend) alternatives.
+The project uses **Cloudflare Workers** for the frontend and **Render** for the backend API.
 
-### Primary: Render (both services)
+### Frontend: Cloudflare Workers (OpenNext)
+- **Frontend** (`settle-web`) deploys to Cloudflare Workers via OpenNext (`@opennextjs/cloudflare`)
+- **Account:** Settleinpeacenow@gmail.com (`23b969235059f30399650fc6ae16b77a`)
+- **Worker:** `settleinpeace` — serves `https://settleinpeace.settleinpeace.workers.dev`
+- **workers.dev subdomain:** `settleinpeace`
+- **Runtime:** `nodejs_compat`, compatibility date `2025-01-01`
+- **Deploy commands:** `cd settle-web && pnpm cf:build && pnpm cf:deploy`
+- **Config files:** `wrangler.jsonc`, `open-next.config.ts`, `scripts/cf-build.sh`
+- **OpenNext adapter:** `@opennextjs/cloudflare` (replaces deprecated `@cloudflare/next-on-pages`)
+- **Next.js version:** 16.3.5 (required by OpenNext adapter >=16.3.3)
+- **Worker secrets:** Firebase env vars set via Cloudflare API (`PUT /accounts/.../workers/scripts/settleinpeace/secrets`)
+- **API token:** Stored in env var `CLOUDFLARE_API_TOKEN` for deploy (never commit)
+
+### Backend: Render (API)
 - **API service** — built from `settle-api/`, configured in `render.yaml`
-- **Web service** — built from `settle-web/`, configured in `render.yaml` (uses Next.js `output: "standalone"`)
 - **Database** — external PostgreSQL (e.g., Supabase), connected via `DATABASE_URL` set in the Render dashboard
 
 ### Alternative: Railway (backend API)
 - **API service** — built from `settle-api/`, uses `railway.toml` at repo root with the repo-level `Dockerfile`
 - The database is the same external PostgreSQL instance configured via `DATABASE_URL`
 
-### Alternative: Cloudflare Pages (frontend)
+### Legacy: Cloudflare Pages static export (not used)
 - Set `CF_PAGES=1` or `OUTPUT_EXPORT=1` during the build to enable static export (`output: "export"` in `settle-web/next.config.ts`)
 - Use `public/_redirects` and `public/_headers` for redirects and headers
+- Superseded by the OpenNext Workers deployment above
 
 ## Port Assignments
 
@@ -63,8 +76,8 @@ The project supports multiple deployment targets. The primary setup uses **Rende
 - **Backend (settle-api)**: Port 4025
 
 **Production URLs:**
-- **Frontend**: Render web service URL, Cloudflare Pages URL, or custom domain configured in the dashboard
-- **Backend**: Render or Railway API service URL configured in the respective dashboard
+- **Frontend**: `https://settleinpeace.settleinpeace.workers.dev` (or custom domain)
+- **Backend**: `https://api.settleinpeace.com` (Render)
 
 **Environment Variables:**
 - `NEXT_PUBLIC_API_URL`: Backend API URL for frontend

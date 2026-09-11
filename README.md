@@ -39,8 +39,8 @@ A comprehensive debt relief and financial coaching platform that helps people se
 
 ## Monorepo Structure
 
-- `settle-api/` - NestJS backend API (Railway + PostgreSQL)
-- `settle-web/` - Next.js frontend web application (Render)
+- `settle-api/` - NestJS backend API (Render + PostgreSQL)
+- `settle-web/` - Next.js frontend web application (Cloudflare Workers via OpenNext)
 - `settle-mobile/` - Expo React Native mobile application
 - `packages/shared-sdk/` - Comprehensive SDK (auth, API, types, utils)
 - `packages/shared/` - Legacy shared package (being phased out)
@@ -53,6 +53,8 @@ A comprehensive debt relief and financial coaching platform that helps people se
 - Resource library and educational content
 - Lead generation for debt relief partners
 - Financial coaching subscription management
+- Sales CRM dashboard with lead pipeline management
+- Debt collections management (accounts, debtor profiles, skip traces, call logs, dialer, credit reports, background checks)
 
 ### Phase 2: Enhanced Features
 - Interactive debt payoff calculators
@@ -143,17 +145,29 @@ const profile = await api.auth.profile();
 
 ## Deployment
 
-### Primary: Render (API + Web)
+### Frontend: Cloudflare Workers (OpenNext)
+- **Worker:** `settleinpeace` — serves `https://settleinpeace.settleinpeace.workers.dev`
+- **Account:** `23b969235059f30399650fc6ae16b77a`
+- **Runtime:** `nodejs_compat`, compatibility date `2025-01-01`
+- **Adapter:** `@opennextjs/cloudflare` (OpenNext for Cloudflare Workers)
+- **Config files:** `settle-web/wrangler.jsonc`, `settle-web/open-next.config.ts`, `settle-web/scripts/cf-build.sh`
+- **Build & deploy:**
+  ```bash
+  cd settle-web
+  CLOUDFLARE_API_TOKEN=<token> pnpm cf:build   # Build shared-sdk + Next.js + OpenNext bundle
+  CLOUDFLARE_API_TOKEN=<token> pnpm cf:deploy  # Deploy to Cloudflare Workers
+  ```
+- **Environment variables:** Set as Worker vars/secrets via Cloudflare dashboard or API
+- **Full access details:** See `.devin/cloudflare-access.md`
+
+### Backend: Render (API)
 - Configuration: `render.yaml`
 - Health endpoints for the API: `/health`, `/`
 - API port: 4025
-- Web port: 3025
 - Environment variables in Render dashboard
 - Automatic deployments on main branch
 - Build API: `cd settle-api && pnpm install && pnpm run build`
-- Start API: `cd settle-api && pnpm run start`
-- Build Web: `cd settle-web && pnpm install && pnpm run build`
-- Start Web: `cd settle-web && pnpm run start`
+- Start API: `cd settle-api && pnpm run start:prod`
 
 ### Alternative: Railway (API)
 - Configuration: `railway.toml` and repo-level `Dockerfile`
@@ -162,9 +176,10 @@ const profile = await api.auth.profile();
 - Build: `cd settle-api && pnpm install && pnpm run build`
 - Start: `cd settle-api && node dist/main`
 
-### Alternative: Cloudflare Pages (Web)
+### Legacy: Cloudflare Pages static export (not used)
 - Set `CF_PAGES=1` or `OUTPUT_EXPORT=1` during build for static export (`output: "export"` in `next.config.ts`)
 - Use `public/_redirects` and `public/_headers` for redirects and headers
+- Superseded by the OpenNext Workers deployment above
 
 ### EAS (Mobile)
 - Configuration: `eas.json`

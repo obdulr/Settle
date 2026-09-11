@@ -1,8 +1,9 @@
 import type { NextConfig } from "next";
 import path from "path";
 
-// Cloudflare Pages static export is enabled when CF_PAGES=1 or OUTPUT_EXPORT=1.
-// Otherwise, keep the existing standalone config for Render.
+// Static export for Cloudflare Pages (legacy, kept for reference).
+// OpenNext for Cloudflare Workers is the primary deploy target and uses
+// the normal standalone build — no output: "export" needed.
 const isStaticExport =
   process.env.CF_PAGES === "1" || process.env.OUTPUT_EXPORT === "1";
 
@@ -14,18 +15,15 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
+  // OpenNext for Cloudflare Workers uses the default standalone build.
+  // Only switch to static export if explicitly requested (legacy Pages path).
   ...(isStaticExport
     ? {
-        // Static export for Cloudflare Pages.
-        // redirects() and headers() are unsupported with output: "export",
-        // so those are handled via public/_redirects and public/_headers instead.
         output: "export" as const,
         images: { unoptimized: true },
         trailingSlash: true,
       }
     : {
-        // Standalone mode for Render (existing behavior).
-        output: "standalone" as const,
         async redirects() {
           return [
             {

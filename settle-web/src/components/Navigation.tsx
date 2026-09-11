@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { isAuthenticated, getStoredUser, clearAuth } from '../lib/authUtils';
 
 export default function Navigation() {
@@ -13,6 +14,7 @@ export default function Navigation() {
   const user = mounted ? getStoredUser() : null;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { resolvedTheme, setTheme } = useTheme();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -106,6 +108,25 @@ export default function Navigation() {
 
           {/* Right side: auth controls */}
           <div className="flex items-center gap-4">
+            {mounted && (
+              <button
+                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                aria-label="Toggle theme"
+                title="Toggle theme"
+              >
+                {resolvedTheme === 'dark' ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m0 13.5V21m7.5-9H19.5M4.5 12H3m15.364-6.364-1.591 1.591M6.227 17.773l-1.591 1.591M18.364 17.773l-1.591-1.591M6.227 6.227 4.636 4.636M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75 9.75 9.75 0 0 1 8.25 6c0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25 9.75 9.75 0 0 0 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                  </svg>
+                )}
+              </button>
+            )}
+
             {/* Role-gated links (provider/admin) */}
             {authenticated && roleItems.length > 0 && (
               <div className="hidden sm:flex sm:items-center sm:space-x-4">

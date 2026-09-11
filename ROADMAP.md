@@ -2,7 +2,7 @@
 
 > **Status Legend:** ✅ Done · 🔄 In Progress · ❌ Not Started
 >
-> Last updated: July 2025
+> Last updated: September 2026
 
 ## Current Status Summary
 
@@ -40,6 +40,31 @@ Settle In Peace is a two-sided debt relief marketplace connecting consumers with
 - ✅ Assessment quiz page (web) → lead capture
 - ✅ Lead source and UTM tracking
 
+### Sales CRM
+- ✅ Sales agent role and auth
+- ✅ Sales lead pipeline (new, contacted, interested, converted, rejected)
+- ✅ Sales CRM dashboard with list and pipeline views (`/sales`, `/dashboard` for sales role)
+- ✅ Lead status updates with notes and activity timeline
+- ✅ Sales lead stats (total, new, contacted, converted, conversion rate)
+- ✅ Admin sales agent management (`/admin/sales-agents`)
+- ✅ Admin sales CRM view (`/admin/sales`)
+
+### Debt Collections
+- ✅ Collection accounts with full lifecycle (new, active, contacted, payment_plan, settled, paid_in_full, litigation, charge_off, bankruptcy, deceased, closed)
+- ✅ Debtor profiles
+- ✅ Skip trace functionality
+- ✅ Call logs and dialer integration
+- ✅ Credit reports and background checks
+- ✅ Collection notes and account assignment
+- ✅ Collections page (`/collections`) with filtering and priority management
+
+### Financial Coaching
+- ✅ Coaching subscription via Stripe
+- ✅ Budget management (budgets, expenses, recurring items)
+- ✅ Goal tracking (debt payoff, savings, emergency fund)
+- ✅ Coaching dashboard with summary metrics
+- ✅ Coaching page (`/coaching`)
+
 ### Provider Marketplace (Foundation)
 - ✅ Provider entity with full company profile (services, debt types, states served, pricing, reputation, membership)
 - ✅ Provider auth and portal
@@ -58,50 +83,49 @@ Settle In Peace is a two-sided debt relief marketplace connecting consumers with
 - ✅ Profile and settings pages
 - ✅ Privacy and Terms pages
 - ✅ Provider portal (leads, billing, settings)
+- ✅ Sales CRM dashboard with lead pipeline management (`/sales`, `/dashboard` for sales role)
+- ✅ Debt collections management page (`/collections` — accounts, debtor profiles, skip traces, call logs, dialer, credit reports, background checks)
+- ✅ Admin dashboard with sales agent management (`/admin`, `/admin/sales`, `/admin/sales-agents`)
+- ✅ CRM center (`/crm`)
+- ✅ Educational content library (`/learn` with `generateStaticParams` for SEO)
+- ✅ Financial coaching subscription page (`/coaching`)
+- ✅ Debt calculators page (`/calculators`)
+- ✅ Disclosures page (`/disclosures`)
 
 ### Infrastructure
-- ✅ PostgreSQL database on Railway
-- ✅ TypeORM migrations (users, activities, debts, providers, leads)
-- ✅ NestJS API deployed on Railway
-- ✅ Next.js web service deployed on Railway
+- ✅ PostgreSQL database (external, Supabase)
+- ✅ TypeORM migrations (users, activities, debts, providers, leads, collections, coaching)
+- ✅ NestJS API deployed on Render
+- ✅ Next.js web deployed on Cloudflare Workers via OpenNext (`https://settleinpeace.settleinpeace.workers.dev`)
 - ✅ Health check endpoints (`/health`, `/`)
 - ✅ Email service (Resend) with dev console logging
 - ✅ SMS service (Telnyx)
-- ✅ Stripe integration (in progress)
+- ✅ Stripe integration (coaching subscriptions, lead purchases, provider subscriptions)
 - ✅ Shared SDK package (`@settle/shared-sdk`)
+- ✅ Firebase Phone Authentication (client-side, alternative to Telnyx OTP)
 
 ---
 
 ## What's In Progress 🔄
 
 ### Marketplace & Matching
-- 🔄 Lead quality scoring system (field exists, scoring logic pending)
+- 🔄 Lead quality scoring system (field exists, automated scoring logic pending)
 - 🔄 Full provider dashboard with analytics
 - 🔄 Consumer progress tracking portal
-- 🔄 Stripe payment processing integration (module exists, needs completion)
 
 ### Mobile
 - 🔄 Mobile app for consumers (Expo project scaffolded, services in progress)
-
-### WebAuthn
-- 🔄 Passkey column migration fix (renaming + type corrections in progress)
 
 ---
 
 ## What's Pending ❌
 
 ### Phase 1 — MVP Completion
-- ❌ Resource library / educational content
-- ❌ Educational blog articles
-- ❌ Debt calculator tools
 - ❌ FAQ section
-- ❌ Coaching subscription with core tools
 
 ### Phase 2 — Marketplace Engine (Weeks 9–16)
 - ❌ Real-time provider bidding engine
 - ❌ Consumer-provider matching algorithm
-- ❌ Provider marketplace subscription billing ($500–$2,500/month seats)
-- ❌ Pay-per-lead purchasing with Stripe checkout
 - ❌ Premium placement / listing upgrades for providers
 
 ### Phase 3 — Intelligence (Weeks 17–24)
@@ -136,17 +160,17 @@ Settle In Peace is a two-sided debt relief marketplace connecting consumers with
 
 ## Next Steps (Immediate Priorities)
 
-1. **Complete WebAuthn migration fix** — Run the `FixPasskeyColumns1700000000005` migration to align the database schema with the User entity (rename `passkey_id` → `passkey_credential_id`, change `passkey_public_key` to `bytea`, add `passkey_counter` and `passkey_transports`).
+1. **Custom domain** — Point `www.settleinpeace.com` at the Cloudflare Worker by adding routes to `wrangler.jsonc` (see `.devin/cloudflare-access.md`).
 
-2. **Finish Stripe integration** — Complete payment processing for pay-per-lead purchases and provider subscription billing.
+2. **CORS configuration** — Add the Cloudflare Workers URL (or custom domain) to `CORS_ORIGINS` on the Render API so the frontend can authenticate against the backend.
 
 3. **Lead quality scoring** — Implement automated scoring logic based on debt amount, state, employment status, and credit tier.
 
-4. **Coaching subscription** — Build the $49/month coaching product with budget tracker, debt payoff calculator, and goal setting.
+4. **Provider matching algorithm** — Connect qualified leads to providers based on debt type, state, and amount thresholds.
 
-5. **Provider matching algorithm** — Connect qualified leads to providers based on debt type, state, and amount thresholds.
+5. **Content library expansion** — Continue creating educational blog articles and debt calculators for SEO and user education.
 
-6. **Content library** — Create educational blog articles, debt calculators, and FAQ section for SEO and user education.
+6. **Mobile app** — Complete the Expo mobile app for consumers.
 
 ---
 
@@ -154,15 +178,16 @@ Settle In Peace is a two-sided debt relief marketplace connecting consumers with
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js, Tailwind CSS |
+| Frontend | Next.js 16.3.5, Tailwind CSS |
+| Frontend Hosting | Cloudflare Workers (OpenNext `@opennextjs/cloudflare`) |
 | Backend | NestJS, TypeORM |
-| Database | PostgreSQL (Railway) |
+| Backend Hosting | Render |
+| Database | PostgreSQL (Supabase) |
 | Mobile | Expo / React Native |
-| Auth | JWT + Passport + WebAuthn |
+| Auth | JWT + Passport + WebAuthn + Firebase Phone |
 | Email | Resend |
 | SMS | Telnyx |
 | Payments | Stripe |
-| Hosting | Railway (API + Web + Postgres) |
 | Package Manager | pnpm |
 | Monorepo | Turborepo + pnpm workspaces |
 
@@ -172,21 +197,30 @@ Settle In Peace is a two-sided debt relief marketplace connecting consumers with
 
 ```
 Settle/
-├── settle-api/          # NestJS backend (port 4025)
+├── settle-api/          # NestJS backend (port 4025, deployed on Render)
 │   ├── src/
-│   │   ├── entities/    # User, Activity, Debt, Provider, Lead
+│   │   ├── entities/    # User, Activity, Debt, Provider, Lead, CollectionAccount, etc.
 │   │   ├── migrations/  # TypeORM migrations
-│   │   ├── auth/        # Auth, WebAuthn, SMS auth
+│   │   ├── auth/        # Auth, WebAuthn, SMS auth, Firebase
 │   │   ├── debts/       # Debt CRUD
 │   │   ├── leads/       # Lead management
 │   │   ├── providers/   # Provider management
+│   │   ├── sales/       # Sales CRM (leads, stats, notes, status)
+│   │   ├── collections/ # Debt collections (accounts, skip traces, call logs, dialer)
+│   │   ├── crm/         # CRM center (debt settlement service)
+│   │   ├── coaching/    # Financial coaching (budgets, goals, subscriptions)
+│   │   ├── billing/     # Deposits and billing
 │   │   └── stripe/      # Payment integration
 │   └── .env.example
-├── settle-web/          # Next.js frontend (port 3025)
-│   └── src/app/         # Assessment, compare, dashboard, portal, etc.
+├── settle-web/          # Next.js frontend (port 3025, deployed on Cloudflare Workers)
+│   ├── src/app/         # Assessment, compare, dashboard, portal, sales, collections, etc.
+│   ├── scripts/cf-build.sh  # Cloudflare Workers build script
+│   ├── wrangler.jsonc   # Worker configuration
+│   └── open-next.config.ts  # OpenNext adapter config
 ├── settle-mobile/       # Expo mobile app
 ├── packages/
 │   └── shared-sdk/      # @settle/shared-sdk
 ├── docs/                # Business plan, competitive analysis, flows
+├── .devin/              # Cloudflare access docs, skills
 └── scripts/             # macOS metadata cleanup, config
 ```

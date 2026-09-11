@@ -5,11 +5,11 @@ Use this checklist to take the platform from "builds and runs locally" to "accep
 ## 1. Infrastructure
 
 - [ ] **Provision PostgreSQL database** (Railway, Render, AWS RDS, or Supabase).
-- [ ] **Settle API deployment** (Railway/Render): point build/start commands to `settle-api`.
-- [ ] **Settle Web deployment** (Railway/Render/Vercel): point build/start commands to `settle-web`.
+- [x] **Settle API deployment** (Render): configured in `render.yaml`, build/start commands point to `settle-api`.
+- [x] **Settle Web deployment** (Cloudflare Workers via OpenNext): deployed at `https://settleinpeace.settleinpeace.workers.dev`.
 - [ ] **Custom domain** configured (`settleinpeace.com` or similar) with DNS pointing to deployed services.
-- [ ] **SSL/HTTPS** enforced on both API and web.
-- [ ] **Environment variables** populated in production (see `settle-api/.env.example`).
+- [x] **SSL/HTTPS** enforced on both API and web (Cloudflare and Render provide this).
+- [ ] **Environment variables** populated in production (see `settle-api/.env.example` and `.devin/cloudflare-access.md`).
 
 ## 2. Database
 
@@ -115,9 +115,10 @@ Use this checklist to take the platform from "builds and runs locally" to "accep
 
 If you want revenue **this week**:
 
-1. Deploy API + web to Railway with production env vars.
-2. Run migrations and create an admin user.
-3. Create Stripe test products and configure price IDs.
-4. Register a test provider, approve them, and add test credits.
-5. Submit a test assessment and purchase the lead.
-6. Switch Stripe to live mode, onboard 1–2 real providers, and drive traffic.
+1. Deploy API to Render with production env vars.
+2. Deploy web to Cloudflare Workers: `cd settle-web && CLOUDFLARE_API_TOKEN=<token> pnpm cf:build && pnpm cf:deploy`.
+3. Run migrations and create an admin user.
+4. Create Stripe test products and configure price IDs.
+5. Register a test provider, approve them, and add test credits.
+6. Submit a test assessment and purchase the lead.
+7. Switch Stripe to live mode, onboard 1–2 real providers, and drive traffic.

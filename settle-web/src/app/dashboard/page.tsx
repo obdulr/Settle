@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuthenticatedApi } from '../../lib/api';
-import { getStoredUser, clearAuth, isAuthenticated } from '../../lib/authUtils';
+import { getStoredUser, getStoredToken, clearAuth, isAuthenticated } from '../../lib/authUtils';
 import ComplianceDisclosure from '../../components/ComplianceDisclosure';
+import SalesCRMDashboard from '../sales/SalesCRMDashboard';
 
 interface UserProfile {
   id: string;
@@ -14,6 +15,20 @@ interface UserProfile {
   lastName?: string;
   phone?: string;
   createdAt?: string;
+}
+
+function getUserFromToken(): any | null {
+  const token = getStoredToken();
+  if (!token) return null;
+  try {
+    let base64 = token.split('.')[1];
+    base64 = base64.replace(/-/g, '+').replace(/_/g, '/');
+    base64 = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    const json = atob(base64);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
 }
 
 export default function DashboardPage() {
@@ -28,14 +43,25 @@ export default function DashboardPage() {
       return;
     }
 
+    // Fast path: check stored user and JWT token for sales role before hitting the API
+    const stored = getStoredUser();
+    if (stored?.role === 'sales') {
+      setUser(stored);
+      setLoading(false);
+      return;
+    }
+    const tokenUser = getUserFromToken();
+    if (tokenUser?.role === 'sales') {
+      setUser(tokenUser);
+      setLoading(false);
+      return;
+    }
+
+    // Fallback: fetch profile from API to determine role
     const fetchProfile = async () => {
       try {
         const apiCall = getAuthenticatedApi();
-
-        const response = await apiCall<UserProfile>('/auth/profile', {
-          method: 'GET',
-        });
-
+        const response = await apiCall<UserProfile>('/auth/profile', { method: 'GET' });
         setUser(response);
       } catch (err) {
         setError('Failed to load profile');
@@ -66,6 +92,11 @@ export default function DashboardPage() {
         <div className="text-red-600 dark:text-red-400">{error}</div>
       </div>
     );
+  }
+
+  // Sales users see the CRM dashboard — check user.role directly, no separate state
+  if (user?.role === 'sales') {
+    return <SalesCRMDashboard initialUser={user} />;
   }
 
   return (
